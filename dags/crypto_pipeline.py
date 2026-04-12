@@ -23,8 +23,8 @@ default_args = {
 def upload_task_func():
     today = datetime.today().strftime("%Y-%m-%d")
 
-    local_file = f"/opt/airflow/data/raw/coingecko/{today}/data.json"
-    gcs_path = f"raw/coingecko/{today}/data.json"
+    local_file = f"/opt/airflow/data/raw/coingecko/{today}/data.jsonl"
+    gcs_path = f"raw/coingecko/{today}/data.jsonl"
 
     upload_to_gcs(BUCKET_NAME, local_file, gcs_path)
 

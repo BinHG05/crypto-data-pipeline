@@ -6,3 +6,5 @@ logs/
 data/
 data/raw/
 logs/
+sitecustomize.py
+config/airflow.cfg
