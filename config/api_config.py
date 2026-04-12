@@ -15,3 +15,5 @@ REDDIT_API = {
         "User-Agent": "crypto-data-pipeline"
     }
 }
+
+BUCKET_NAME = "crypto-data-lake-subin"
