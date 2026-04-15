@@ -1,24 +1,42 @@
 from google.cloud import bigquery
 
+from config.api_config import BUCKET_NAME, COINGECKO_TABLE_ID, REDDIT_TABLE_ID
+
+
 client = bigquery.Client()
 
-def load_coingecko():
-    print("🚀 Starting load job...")
 
-    uri = "gs://crypto-data-lake-subin/raw/coingecko/*/data.jsonl"
-
-    table_id = "snappy-monolith-481115-e5.crypto_dataset.coingecko_prices"
+def load_jsonl_from_gcs(gcs_uri: str, table_id: str) -> None:
+    print(f"Starting load job from {gcs_uri} to {table_id}...")
 
     job_config = bigquery.LoadJobConfig(
         source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
-        write_disposition="WRITE_APPEND",
+        write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
     )
 
-    load_job = client.load_table_from_uri(uri, table_id, job_config=job_config)
-
+    load_job = client.load_table_from_uri(gcs_uri, table_id, job_config=job_config)
     load_job.result()
+    print(f"Finished load job for {table_id}")
 
-    print("✅ DONE loading data")
+
+def load_coingecko() -> None:
+    load_jsonl_from_gcs(
+        f"gs://{BUCKET_NAME}/raw/coingecko/*/data.jsonl",
+        COINGECKO_TABLE_ID,
+    )
+
+
+def load_reddit() -> None:
+    load_jsonl_from_gcs(
+        f"gs://{BUCKET_NAME}/raw/reddit/*/data.jsonl",
+        REDDIT_TABLE_ID,
+    )
+
+
+def load_all() -> None:
+    load_coingecko()
+    load_reddit()
+
 
 if __name__ == "__main__":
-    load_coingecko()
+    load_all()

@@ -11,11 +11,10 @@ from ingestion.reddit_ingest import fetch_reddit
 def run():
     print("Starting ingestion pipeline...")
 
+    fetch_coingecko()
     fetch_reddit()
 
-    
     print("Pipeline completed.")
 
 if __name__ == "__main__":
-    
     run()
