@@ -1,15 +1,16 @@
-Welcome to your new dbt project!
+# dbt Layer
 
-### Using the starter project
+This dbt project transforms raw cryptocurrency data stored in BigQuery into analytics-ready models.
 
-Try running the following commands:
-- dbt run
-- dbt test
+## Models
 
+- `stg_coingecko`: standardizes raw CoinGecko prices
+- `stg_reddit`: standardizes Reddit discussion data
+- `fct_crypto_daily`: daily mart combining prices and Reddit engagement
 
-### Resources:
-- Learn more about dbt [in the docs](https://docs.getdbt.com/docs/introduction)
-- Check out [Discourse](https://discourse.getdbt.com/) for commonly asked questions and answers
-- Join the [chat](https://community.getdbt.com/) on Slack for live discussions and support
-- Find [dbt events](https://events.getdbt.com) near you
-- Check out [the blog](https://blog.getdbt.com/) for the latest news on dbt's development and best practices
+## Commands
+
+```bash
+dbt run --project-dir crypto_transform --profiles-dir crypto_transform
+dbt test --project-dir crypto_transform --profiles-dir crypto_transform
+```
