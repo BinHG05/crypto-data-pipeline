@@ -9,6 +9,22 @@ import requests
 from utils.file_utils import save_json
 from config.api_config import COINGECKO_API
 
+from datetime import datetime
+
+def transform_coingecko(data):
+    result = []
+    now = datetime.utcnow()
+
+    for coin, value in data.items():
+        result.append({
+            "symbol": coin,
+            "price": value["usd"],
+            "timestamp": now.strftime("%Y-%m-%d %H:%M:%S"),
+            "ingestion_date": now.strftime("%Y-%m-%d")
+        })
+
+    return result
+
 def fetch_coingecko():
 
     session = requests.Session()
@@ -23,8 +39,10 @@ def fetch_coingecko():
         raise Exception(f"API Error: {response.status_code}")
 
     data = response.json()
+    ## chuyển json từ nestd -> flat
+    result = transform_coingecko(data)
 
-    save_json(data, "coingecko")
+    save_json(result, "coingecko")
 
 
 if __name__ == "__main__":

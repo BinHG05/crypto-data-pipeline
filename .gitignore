@@ -1,3 +1,18 @@
+gcp-key.json
+.env
 __pycache__/
 *.pyc
-.env
+logs/
+data/
+data/raw/
+logs/
+sitecustomize.py
+config/airflow.cfg
+# dbt profiles
+profiles.yml
+
+# Personal config
+.user.yml
+
+# Google Cloud Keys (Quan trọng nhất)
+*.json
