@@ -1,0 +1,8 @@
+version: 2
+sources:
+  - name: crypto_raw
+    database: snappy-monolith-481115-e5
+    schema: crypto_dataset
+    tables:
+      - name: coingecko_prices
+      - name: reddit_posts
