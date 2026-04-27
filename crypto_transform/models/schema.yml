@@ -23,12 +23,19 @@ models:
   - name: stg_coingecko
     description: Standardized CoinGecko pricing records.
     columns:
+      - name: record_id
+        tests:
+          - not_null
+          - unique
       - name: coin_id
         tests:
           - not_null
       - name: price_usd
         tests:
           - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1000000
       - name: recorded_at
         tests:
           - not_null
@@ -36,6 +43,10 @@ models:
   - name: stg_reddit
     description: Standardized Reddit post records for crypto discussions.
     columns:
+      - name: record_id
+        tests:
+          - not_null
+          - unique
       - name: post_id
         tests:
           - not_null
