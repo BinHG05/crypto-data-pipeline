@@ -1,0 +1,42 @@
+name: Crypto Pipeline CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  dbt-ci:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./crypto_transform
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install dbt-bigquery
+          pip install -r ../requirements.txt
+
+      - name: Install dbt packages
+        run: dbt deps
+
+      - name: Validate dbt project
+        run: dbt parse
+
+      - name: Run dbt tests
+        run: dbt test
