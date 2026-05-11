@@ -49,7 +49,22 @@ jobs:
       - name: Set up dbt profile
         run: |
           mkdir -p ~/.dbt
-          cp "$GITHUB_WORKSPACE/crypto_transform/profiles.yml" ~/.dbt/profiles.yml
+          cat > ~/.dbt/profiles.yml <<'EOF'
+          crypto_transform:
+            outputs:
+              dev:
+                type: bigquery
+                method: service-account
+                project: "${GCP_PROJECT_ID:-snappy-monolith-481115-e5}"
+                dataset: "${BQ_MART_DATASET:-crypto_marts}"
+                location: "${GCP_LOCATION:-asia-southeast1}"
+                keyfile: "${GOOGLE_APPLICATION_CREDENTIALS}"
+                threads: 2
+                job_execution_timeout_seconds: 300
+                job_retries: 1
+                priority: interactive
+            target: dev
+          EOF
 
       - name: Validate dbt project
         run: dbt parse
