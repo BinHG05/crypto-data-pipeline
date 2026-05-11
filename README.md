@@ -8,6 +8,8 @@ End-to-end learning project for data engineering on GCP using batch ingestion, s
 - Raw data storage in local landing zone and Google Cloud Storage
 - Batch loading from GCS into BigQuery raw tables
 - Realtime BTC trade streaming from Binance into BigQuery
+- Monitoring for empty daily data, missing daily mart data, and delayed streaming data
+- Airflow failure alerts via email and Slack webhook
 - dbt staging and mart models on BigQuery
 - Airflow orchestration for the batch pipeline
 - FastAPI for simple data serving
@@ -56,11 +58,27 @@ warehouse/          BigQuery loading logic
 `dags/crypto_pipeline.py` orchestrates:
 
 1. batch ingestion
-2. upload to GCS
-3. load to BigQuery raw tables
-4. dbt run and dbt test
+2. local non-empty data validation
+3. upload to GCS
+4. load to BigQuery raw tables
+5. raw table validation
+6. dbt run and dbt test
+7. daily mart completeness validation
 
-### 4. Transformation
+`dags/streaming_monitor.py` monitors delayed streaming in the BTC realtime table.
+
+### 4. Monitoring and Alerting
+
+The project now includes:
+
+- Empty data detection for CoinGecko and Reddit batch inputs
+- Missing daily data checks for the `fct_crypto_daily` mart
+- Delayed streaming detection for the BTC realtime table
+- Airflow failure alerts through email and Slack webhook
+
+Detailed setup and operating steps are documented in [docs/monitoring.md](/abs/path/d:/crypto-data-pipeline/docs/monitoring.md:1).
+
+### 5. Transformation
 
 dbt models:
 
@@ -68,7 +86,7 @@ dbt models:
 - `stg_reddit`
 - `fct_crypto_daily`
 
-Basic dbt tests are included for key columns.
+Basic dbt tests are included for key columns and latest daily snapshot completeness.
 
 ## Environment Variables
 
@@ -85,6 +103,16 @@ You can configure the project with environment variables instead of hardcoding v
 - `GOOGLE_APPLICATION_CREDENTIALS`
 - `DBT_PROJECT_DIR`
 - `DBT_PROFILES_DIR`
+- `EXPECTED_COIN_IDS`
+- `STREAMING_MAX_DELAY_MINUTES`
+- `STREAMING_MONITOR_SCHEDULE`
+- `ALERT_EMAIL_TO`
+- `SLACK_WEBHOOK_URL`
+- `AIRFLOW__SMTP__SMTP_HOST`
+- `AIRFLOW__SMTP__SMTP_USER`
+- `AIRFLOW__SMTP__SMTP_PASSWORD`
+- `AIRFLOW__SMTP__SMTP_PORT`
+- `AIRFLOW__SMTP__SMTP_MAIL_FROM`
 
 ## How To Run
 

@@ -3,9 +3,11 @@ from google.cloud import bigquery
 from google.cloud.bigquery import QueryJobConfig, ScalarQueryParameter
 
 from config.settings import GCP_PROJECT_ID, MART_DATASET
+from utils.logger import get_logger
 
 
 app = FastAPI(title="Crypto Data API")
+logger = get_logger(__name__)
 
 client = bigquery.Client()
 
@@ -17,6 +19,8 @@ def read_root():
 
 @app.get("/crypto-daily")
 def get_crypto_daily(coin_id: str = "bitcoin"):
+    logger.info(f"Received crypto daily request | coin_id={coin_id}")
+
     query = f"""
         SELECT *
         FROM `{GCP_PROJECT_ID}.{MART_DATASET}.fct_crypto_daily`
@@ -27,8 +31,14 @@ def get_crypto_daily(coin_id: str = "bitcoin"):
     job_config = QueryJobConfig(
         query_parameters=[ScalarQueryParameter("coin_id", "STRING", coin_id)]
     )
-    query_job = client.query(query, job_config=job_config)
-    results = query_job.result()
+    try:
+        query_job = client.query(query, job_config=job_config)
+        results = query_job.result()
+    except Exception as exc:
+        logger.error(
+            f"BigQuery query failed | endpoint=/crypto-daily | coin_id={coin_id} | error={exc}"
+        )
+        raise
 
     data = []
     for row in results:
@@ -41,4 +51,9 @@ def get_crypto_daily(coin_id: str = "bitcoin"):
                 "reddit_score": row.reddit_score,
             }
         )
+
+    logger.info(
+        f"Completed crypto daily request | coin_id={coin_id} | rows={len(data)}"
+    )
+
     return data

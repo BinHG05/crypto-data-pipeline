@@ -1,4 +1,11 @@
-{{ config(materialized='table') }}
+{{ config(
+    materialized='table',
+    partition_by={
+        "field": "report_date",
+        "data_type": "date"
+    },
+    cluster_by=["coin_id"]
+) }}
 
 WITH prices AS (
     SELECT 
@@ -23,7 +30,7 @@ SELECT
     p.coin_id,
 
     -- ✅ BUSINESS PRIMARY KEY
-    CONCAT(p.coin_id, '_', CAST(p.report_date AS STRING)) AS record_id,
+    {{ dbt_utils.generate_surrogate_key(['p.coin_id', 'p.report_date']) }} AS record_id,
 
     p.avg_price,
     COALESCE(d.total_posts, 0) AS reddit_posts,
