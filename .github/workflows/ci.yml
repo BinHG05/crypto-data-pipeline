@@ -3,6 +3,8 @@ name: Crypto Pipeline CI
 on:
   push:
     branches:
+      - main
+      - dev
 
   pull_request:
     branches:
@@ -32,18 +34,6 @@ jobs:
         run: |
           pip install dbt-bigquery
           pip install -r ../requirements.txt
-
-      - name: Install dbt packages
-        run: dbt deps
-
-      - name: Validate dbt project
-        run: dbt parse
-
-      - name: Run dbt models
-        run: dbt run
-
-      - name: Run dbt tests
-        run: dbt test
 
       - name: Write GCP service account key
         env:
@@ -75,8 +65,14 @@ jobs:
             target: dev
           EOF
 
+      - name: Install dbt packages
+        run: dbt deps
+
       - name: Validate dbt project
         run: dbt parse
+
+      - name: Run dbt models
+        run: dbt run
 
       - name: Run dbt tests
         run: dbt test
