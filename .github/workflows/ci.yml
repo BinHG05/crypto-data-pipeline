@@ -4,11 +4,12 @@ on:
   push:
     branches:
       - main
-      - develop
+      - dev
 
   pull_request:
     branches:
       - main
+      - dev
 
 jobs:
   dbt-ci:
