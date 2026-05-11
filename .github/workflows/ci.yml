@@ -13,7 +13,6 @@ jobs:
   dbt-ci:
     runs-on: ubuntu-latest
     env:
-      DBT_PROFILES_DIR: .
       GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/crypto_transform/gcp-key.json
 
     defaults:
@@ -47,8 +46,13 @@ jobs:
           fi
           printf '%s' "$GCP_SERVICE_ACCOUNT_KEY" > gcp-key.json
 
+      - name: Set up dbt profile
+        run: |
+          mkdir -p ~/.dbt
+          cp profiles.yml ~/.dbt/profiles.yml
+
       - name: Validate dbt project
-        run: dbt parse --profiles-dir .
+        run: dbt parse
 
       - name: Run dbt tests
-        run: dbt test --profiles-dir .
+        run: dbt test
