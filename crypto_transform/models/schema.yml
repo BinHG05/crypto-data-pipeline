@@ -60,7 +60,8 @@ models:
     description: Daily mart combining pricing and Reddit engagement metrics.
     tests:
       - dbt_utils.expression_is_true:
-          expression: "avg_price >= 0"
+          arguments:
+            expression: "avg_price >= 0"
     columns:
       - name: report_date
         tests:

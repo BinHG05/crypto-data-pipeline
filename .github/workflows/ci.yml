@@ -49,7 +49,7 @@ jobs:
       - name: Set up dbt profile
         run: |
           mkdir -p ~/.dbt
-          cat > ~/.dbt/profiles.yml <<'EOF'
+          cat > ~/.dbt/profiles.yml <<EOF
           crypto_transform:
             outputs:
               dev:
