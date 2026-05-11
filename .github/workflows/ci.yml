@@ -49,7 +49,7 @@ jobs:
       - name: Set up dbt profile
         run: |
           mkdir -p ~/.dbt
-          cp profiles.yml ~/.dbt/profiles.yml
+          cp "$GITHUB_WORKSPACE/crypto_transform/profiles.yml" ~/.dbt/profiles.yml
 
       - name: Validate dbt project
         run: dbt parse
