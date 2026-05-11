@@ -2,14 +2,34 @@
 
 WITH raw_reddit AS (
     SELECT * FROM {{ source('crypto_raw', 'reddit_posts') }}
+),
+
+normalized AS (
+    SELECT
+        id AS post_id,
+        title,
+        CAST(score AS INT64) AS score,
+        CAST(created_utc AS TIMESTAMP) AS created_at,
+        DATE(CAST(created_utc AS TIMESTAMP)) AS report_date
+    FROM raw_reddit
+),
+
+deduplicated AS (
+    SELECT
+        *,
+        ROW_NUMBER() OVER (
+            PARTITION BY post_id
+            ORDER BY created_at DESC, score DESC, title DESC
+        ) AS row_num
+    FROM normalized
 )
 
 SELECT
-    id AS post_id,
+    post_id AS record_id,
+    post_id,
     title,
     score,
-    -- Nếu nó đã là TIMESTAMP, chỉ cần lấy chính nó
-    created_utc AS created_at,
-    -- Ép về kiểu DATE để làm khóa JOIN
-    DATE(created_utc) AS report_date
-FROM raw_reddit
+    created_at,
+    report_date
+FROM deduplicated
+WHERE row_num = 1

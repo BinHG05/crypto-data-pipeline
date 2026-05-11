@@ -1,4 +1,11 @@
-{{ config(materialized='table') }}
+{{ config(
+    materialized='table',
+    partition_by={
+        "field": "report_date",
+        "data_type": "date"
+    },
+    cluster_by=["coin_id"]
+) }}
 
 WITH prices AS (
     SELECT 
@@ -21,8 +28,14 @@ discussions AS (
 SELECT 
     p.report_date,
     p.coin_id,
+
+    -- ✅ BUSINESS PRIMARY KEY
+    {{ dbt_utils.generate_surrogate_key(['p.coin_id', 'p.report_date']) }} AS record_id,
+
     p.avg_price,
     COALESCE(d.total_posts, 0) AS reddit_posts,
     COALESCE(d.total_engagement, 0) AS reddit_score
+
 FROM prices p
-LEFT JOIN discussions d ON p.report_date = d.report_date
+LEFT JOIN discussions d 
+    ON p.report_date = d.report_date
