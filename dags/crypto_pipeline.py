@@ -1,12 +1,12 @@
-from datetime import datetime, timedelta
 import logging
-from pathlib import Path
 import sys
+from datetime import datetime, timedelta
+from pathlib import Path
 
 from airflow import DAG
 from airflow.exceptions import AirflowException, AirflowSkipException
-from airflow.operators.python import PythonOperator
 from airflow.operators.bash import BashOperator
+from airflow.operators.python import PythonOperator
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,6 @@ from utils.monitoring import (
 from utils.upload import upload_to_gcs
 from warehouse.load_to_bigquery import load_all
 
-
 default_args = {
     "owner": "dat",
     "start_date": datetime(2024, 1, 1),
@@ -43,9 +42,7 @@ def upload_source_to_gcs(source: str) -> None:
 
     today = datetime.utcnow().strftime("%Y-%m-%d")
 
-    local_file = Path(
-        f"/opt/airflow/data/raw/{source}/{today}/data.jsonl"
-    )
+    local_file = Path(f"/opt/airflow/data/raw/{source}/{today}/data.jsonl")
 
     if not local_file.exists():
 
@@ -55,11 +52,7 @@ def upload_source_to_gcs(source: str) -> None:
 
     logger.info(f"Uploading {source} data to GCS")
 
-    upload_to_gcs(
-        BUCKET_NAME,
-        local_file,
-        f"raw/{source}/{today}/data.jsonl"
-    )
+    upload_to_gcs(BUCKET_NAME, local_file, f"raw/{source}/{today}/data.jsonl")
 
     logger.info(f"Upload completed for {source}")
 
@@ -154,4 +147,10 @@ with DAG(
     fetch_reddit_task >> validate_reddit_data_task >> upload_reddit_task
 
     [upload_coingecko_task, upload_reddit_task] >> load_bq_task
-    load_bq_task >> validate_loaded_raw_tables_task >> dbt_run_task >> dbt_test_task >> validate_daily_mart_task
+    (
+        load_bq_task
+        >> validate_loaded_raw_tables_task
+        >> dbt_run_task
+        >> dbt_test_task
+        >> validate_daily_mart_task
+    )

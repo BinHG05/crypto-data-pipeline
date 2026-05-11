@@ -1,5 +1,5 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 
 from utils.logger import get_logger
 
@@ -9,11 +9,12 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-import requests
-from utils.file_utils import save_json
-from config.api_config import COINGECKO_API
-
 from datetime import datetime
+
+import requests
+
+from config.api_config import COINGECKO_API
+from utils.file_utils import save_json
 
 
 def transform_coingecko(data):
@@ -21,12 +22,14 @@ def transform_coingecko(data):
     now = datetime.utcnow()
 
     for coin, value in data.items():
-        result.append({
-            "symbol": coin,
-            "price": value["usd"],
-            "timestamp": now.strftime("%Y-%m-%d %H:%M:%S"),
-            "ingestion_date": now.strftime("%Y-%m-%d")
-        })
+        result.append(
+            {
+                "symbol": coin,
+                "price": value["usd"],
+                "timestamp": now.strftime("%Y-%m-%d %H:%M:%S"),
+                "ingestion_date": now.strftime("%Y-%m-%d"),
+            }
+        )
 
     return result
 
@@ -40,9 +43,7 @@ def fetch_coingecko():
 
     try:
         response = session.get(
-            COINGECKO_API["url"],
-            params=COINGECKO_API["params"],
-            timeout=30
+            COINGECKO_API["url"], params=COINGECKO_API["params"], timeout=30
         )
 
         logger.info(
@@ -54,9 +55,7 @@ def fetch_coingecko():
         raise RuntimeError(f"Failed to fetch CoinGecko data: {exc}") from exc
 
     if response.status_code != 200:
-        logger.error(
-            f"CoinGecko API failed | status_code={response.status_code}"
-        )
+        logger.error(f"CoinGecko API failed | status_code={response.status_code}")
         raise Exception(f"API Error: {response.status_code}")
 
     data = response.json()
@@ -64,9 +63,7 @@ def fetch_coingecko():
     # nested -> flat
     result = transform_coingecko(data)
 
-    logger.info(
-        f"Transformed CoinGecko data successfully | records={len(result)}"
-    )
+    logger.info(f"Transformed CoinGecko data successfully | records={len(result)}")
 
     if not result:
         logger.error("CoinGecko returned empty dataset")

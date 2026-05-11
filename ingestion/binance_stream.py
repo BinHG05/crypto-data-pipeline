@@ -5,7 +5,6 @@ from binance import AsyncClient, BinanceSocketManager
 from google.cloud import bigquery
 
 from config.api_config import BTC_REALTIME_TABLE_ID
-
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -17,9 +16,7 @@ TABLE_ID = BTC_REALTIME_TABLE_ID
 
 async def main():
 
-    logger.info(
-        f"Starting Binance streaming ingestion | table={TABLE_ID}"
-    )
+    logger.info(f"Starting Binance streaming ingestion | table={TABLE_ID}")
 
     binance_client = await AsyncClient.create()
 
@@ -45,38 +42,30 @@ async def main():
 
                 rows_to_insert = [
                     {
-                        "event_time": datetime.fromtimestamp(
-                            msg["E"] / 1000
-                        ).strftime("%Y-%m-%d %H:%M:%S"),
-
+                        "event_time": datetime.fromtimestamp(msg["E"] / 1000).strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        ),
                         "symbol": msg["s"],
-
                         "price": float(msg["p"]),
                     }
                 ]
 
-                errors = client.insert_rows_json(
-                    TABLE_ID,
-                    rows_to_insert
-                )
+                errors = client.insert_rows_json(TABLE_ID, rows_to_insert)
 
                 if not errors:
 
                     logger.info(
-                        f"Streamed trade successfully | symbol={msg['s']} | price={msg['p']}"
+                        "Streamed trade successfully | "
+                        f"symbol={msg['s']} | price={msg['p']}"
                     )
 
                 else:
 
-                    logger.error(
-                        f"BigQuery streaming insert failed | errors={errors}"
-                    )
+                    logger.error(f"BigQuery streaming insert failed | errors={errors}")
 
     except Exception as exc:
 
-        logger.error(
-            f"Streaming pipeline failed | error={exc}"
-        )
+        logger.error(f"Streaming pipeline failed | error={exc}")
 
         raise
 

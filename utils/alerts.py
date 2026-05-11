@@ -44,7 +44,8 @@ def _send_email_alert(subject: str, body: str) -> None:
     try:
         send_email(ALERT_EMAIL_TO, subject, body)
         logger.info(
-            f"Sent Airflow email alert successfully | recipients={','.join(ALERT_EMAIL_TO)}"
+            "Sent Airflow email alert successfully | "
+            f"recipients={','.join(ALERT_EMAIL_TO)}"
         )
     except Exception as exc:
         logger.error(f"Failed to send Airflow email alert | error={exc}")
@@ -74,7 +75,8 @@ def send_failure_alert(context: dict[str, Any]) -> None:
     subject = f"[Airflow] Failure in {task_instance.dag_id}.{task_instance.task_id}"
 
     logger.warning(
-        f"Dispatching failure alert | dag={task_instance.dag_id} | task={task_instance.task_id}"
+        "Dispatching failure alert | "
+        f"dag={task_instance.dag_id} | task={task_instance.task_id}"
     )
 
     _send_email_alert(subject, message)
