@@ -11,6 +11,10 @@ This dbt project transforms raw cryptocurrency data stored in BigQuery into anal
 ## Commands
 
 ```bash
-dbt run --project-dir crypto_transform --profiles-dir crypto_transform
-dbt test --project-dir crypto_transform --profiles-dir crypto_transform
+conda activate multimodal_gnn
+dbt debug
+dbt run
+dbt test
 ```
+
+If Google authentication suddenly fails with a proxy-related error, check whether `HTTP_PROXY`, `HTTPS_PROXY`, or `ALL_PROXY` is pointing to an invalid local address.

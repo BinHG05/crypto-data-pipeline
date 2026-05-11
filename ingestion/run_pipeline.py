@@ -7,14 +7,17 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from ingestion.coingecko_ingest import fetch_coingecko
 from ingestion.reddit_ingest import fetch_reddit
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 def run():
-    print("Starting ingestion pipeline...")
+    logger.info("Starting manual ingestion pipeline")
 
     fetch_coingecko()
     fetch_reddit()
 
-    print("Pipeline completed.")
+    logger.info("Manual ingestion pipeline completed")
 
 if __name__ == "__main__":
     run()
