@@ -11,7 +11,6 @@ from config.settings import (
     bq_table_id,
 )
 
-
 COINGECKO_API = {
     "url": "https://api.coingecko.com/api/v3/simple/price",
     "params": {

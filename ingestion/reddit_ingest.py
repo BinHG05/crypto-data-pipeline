@@ -1,5 +1,5 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 
 from utils.logger import get_logger
 
@@ -10,8 +10,9 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import requests
-from utils.file_utils import save_json
+
 from config.api_config import REDDIT_API
+from utils.file_utils import save_json
 
 
 def fetch_reddit():
@@ -26,7 +27,7 @@ def fetch_reddit():
             REDDIT_API["url"],
             headers=REDDIT_API["headers"],
             params=REDDIT_API["params"],
-            timeout=30
+            timeout=30,
         )
 
         logger.info(
@@ -39,9 +40,7 @@ def fetch_reddit():
 
     if response.status_code != 200:
 
-        logger.error(
-            f"Reddit API failed | status_code={response.status_code}"
-        )
+        logger.error(f"Reddit API failed | status_code={response.status_code}")
 
         raise Exception("Reddit API failed")
 
@@ -54,17 +53,17 @@ def fetch_reddit():
     for item in children:
         post = item.get("data", {})
 
-        posts.append({
-            "id": post.get("id"),
-            "title": post.get("title"),
-            "score": post.get("score"),
-            "created_utc": post.get("created_utc"),
-            "url": post.get("url")
-        })
+        posts.append(
+            {
+                "id": post.get("id"),
+                "title": post.get("title"),
+                "score": post.get("score"),
+                "created_utc": post.get("created_utc"),
+                "url": post.get("url"),
+            }
+        )
 
-    logger.info(
-        f"Parsed Reddit posts successfully | posts={len(posts)}"
-    )
+    logger.info(f"Parsed Reddit posts successfully | posts={len(posts)}")
 
     if not posts:
         logger.error("Reddit API returned empty dataset")

@@ -1,5 +1,5 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
@@ -11,6 +11,7 @@ from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+
 def run():
     logger.info("Starting manual ingestion pipeline")
 
@@ -18,6 +19,7 @@ def run():
     fetch_reddit()
 
     logger.info("Manual ingestion pipeline completed")
+
 
 if __name__ == "__main__":
     run()

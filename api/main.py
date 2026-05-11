@@ -5,7 +5,6 @@ from google.cloud.bigquery import QueryJobConfig, ScalarQueryParameter
 from config.settings import GCP_PROJECT_ID, MART_DATASET
 from utils.logger import get_logger
 
-
 app = FastAPI(title="Crypto Data API")
 logger = get_logger(__name__)
 
@@ -36,7 +35,8 @@ def get_crypto_daily(coin_id: str = "bitcoin"):
         results = query_job.result()
     except Exception as exc:
         logger.error(
-            f"BigQuery query failed | endpoint=/crypto-daily | coin_id={coin_id} | error={exc}"
+            "BigQuery query failed | "
+            f"endpoint=/crypto-daily | coin_id={coin_id} | error={exc}"
         )
         raise
 
