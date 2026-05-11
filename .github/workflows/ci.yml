@@ -1,0 +1,78 @@
+name: Crypto Pipeline CI
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  dbt-ci:
+    runs-on: ubuntu-latest
+    env:
+      GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/crypto_transform/gcp-key.json
+
+    defaults:
+      run:
+        working-directory: ./crypto_transform
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install dbt-bigquery
+          pip install -r ../requirements.txt
+
+      - name: Write GCP service account key
+        env:
+          GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+        run: |
+          if [ -z "$GCP_SERVICE_ACCOUNT_KEY" ]; then
+            echo "Missing required secret: GCP_SERVICE_ACCOUNT_KEY"
+            exit 1
+          fi
+          printf '%s' "$GCP_SERVICE_ACCOUNT_KEY" > gcp-key.json
+
+      - name: Set up dbt profile
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml <<EOF
+          crypto_transform:
+            outputs:
+              dev:
+                type: bigquery
+                method: service-account
+                project: "${GCP_PROJECT_ID:-snappy-monolith-481115-e5}"
+                dataset: "${BQ_MART_DATASET:-crypto_marts}"
+                location: "${GCP_LOCATION:-asia-southeast1}"
+                keyfile: "${GOOGLE_APPLICATION_CREDENTIALS}"
+                threads: 2
+                job_execution_timeout_seconds: 300
+                job_retries: 1
+                priority: interactive
+            target: dev
+          EOF
+
+      - name: Install dbt packages
+        run: dbt deps
+
+      - name: Validate dbt project
+        run: dbt parse
+
+      - name: Run dbt models
+        run: dbt run
+
+      - name: Run dbt tests
+        run: dbt test
