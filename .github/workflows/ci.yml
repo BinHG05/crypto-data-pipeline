@@ -12,6 +12,32 @@ on:
       - dev
 
 jobs:
+  code-quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install code quality tools
+        run: |
+          pip install black isort flake8
+          pip install -r requirements.txt
+
+      - name: Run Black
+        run: black --check .
+
+      - name: Run isort
+        run: isort --check-only .
+
+      - name: Run flake8
+        run: flake8 .
+
   dbt-ci:
     runs-on: ubuntu-latest
     env:
