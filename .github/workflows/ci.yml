@@ -36,6 +36,15 @@ jobs:
       - name: Install dbt packages
         run: dbt deps
 
+      - name: Validate dbt project
+        run: dbt parse
+
+      - name: Run dbt models
+        run: dbt run
+
+      - name: Run dbt tests
+        run: dbt test
+
       - name: Write GCP service account key
         env:
           GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
