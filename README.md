@@ -1,96 +1,180 @@
 # Crypto Data Pipeline
 
-End-to-end learning project for data engineering on GCP using batch ingestion, streaming ingestion, orchestration, warehousing, transformation, and BI reporting.
+An end-to-end data engineering portfolio project that ingests cryptocurrency
+market and community data, stores it in Google Cloud, transforms it with dbt,
+orchestrates it with Airflow, monitors data quality, and exposes curated data
+for analytics and dashboards.
 
-## What This Project Covers
+## Overview
 
-- Python ingestion from CoinGecko and Reddit
-- Raw data storage in local landing zone and Google Cloud Storage
-- Batch loading from GCS into BigQuery raw tables
-- Realtime BTC trade streaming from Binance into BigQuery
-- Monitoring for empty daily data, missing daily mart data, and delayed streaming data
-- Airflow failure alerts via email and Slack webhook
-- dbt staging and mart models on BigQuery
-- Airflow orchestration for the batch pipeline
-- FastAPI for simple data serving
-- Looker Studio dashboard on top of BigQuery
+This project demonstrates a practical modern data stack:
+
+- Batch ingestion from CoinGecko (prices & trending), Reddit, and Alternative.me (Fear & Greed Index)
+- Realtime BTC trade streaming from Binance
+- Raw data storage in local landing zone, GCS, and BigQuery
+- Data transformation with dbt on BigQuery (calculating Market Sentiment Score and Price vs Social Correlation)
+- Airflow orchestration for batch and monitoring workflows
+- Data quality checks for empty inputs, raw load success, mart completeness, and streaming freshness
+- Failure alerting through email and Slack
+- FastAPI endpoint for lightweight data access
+- GitHub Actions CI for code quality and dbt validation
+
+The goal of the project is not only to move data, but to show production-minded
+engineering habits: validation, observability, fail-fast behavior, and clean
+delivery workflows.
+
+## Business Use Case
+
+The pipeline answers an analytics question:
+
+How can we analyze cryptocurrency price behavior alongside Reddit community discussions and the Fear & Greed Index to extract market sentiment metrics and price-social correlations, while keeping all data pipelines trustworthy?
+
+This supports:
+
+- Daily trend reporting for BTC and ETH
+- **Top Trending Coins**: Tracking daily search spikes of trending coins
+- **Market Sentiment Score**: A composite metric based on Fear & Greed Index and Reddit community activity
+- **Price vs Social Correlation**: Assessing the connection between price momentum and social discussions
+- Near-realtime monitoring of BTC trade ingestion freshness
+- Portfolio-quality examples of data quality and alerting patterns
 
 ## Architecture
 
-### Batch flow
+An interactive architecture diagram is available in [docs/architecture.md](/d:/crypto-data-pipeline/docs/architecture.md:1).
 
-`CoinGecko / Reddit -> local raw JSONL -> GCS raw zone -> BigQuery raw dataset -> dbt staging/mart`
+### Batch Flow
 
-### Realtime flow
+`CoinGecko / Reddit / Fear & Greed -> local JSONL -> GCS raw zone -> BigQuery raw dataset -> dbt staging -> dbt marts (fct_crypto_daily, fct_market_insights)`
 
-`Binance websocket -> BigQuery realtime table -> Looker Studio dashboard`
+### Realtime Flow
 
-## Project Structure
+`Binance websocket -> BigQuery realtime table -> monitoring DAG -> dashboard / alerting`
 
-```text
-api/                FastAPI service
-config/             Shared project settings
-crypto_transform/   dbt project
-dags/               Airflow DAGs
-data/               Local raw landing zone
-ingestion/          Batch and streaming ingestion scripts
-utils/              Shared helpers
-warehouse/          BigQuery loading logic
-```
+### Orchestration Flow
 
-## Main Components
+`Airflow DAG -> validation tasks -> load tasks -> dbt run -> dbt test -> mart completeness check -> alert on failure`
 
-### 1. Ingestion
+## Tech Stack
 
-- `ingestion/coingecko_ingest.py`: fetches price snapshots
-- `ingestion/reddit_ingest.py`: fetches Reddit post metadata
-- `ingestion/binance_stream.py`: streams BTCUSDT trades into BigQuery
-- `ingestion/run_pipeline.py`: runs both batch ingestors locally
+- Python
+- Apache Airflow
+- dbt
+- BigQuery
+- Google Cloud Storage
+- FastAPI
+- Docker Compose
+- GitHub Actions
+- Black, isort, flake8
 
-### 2. Storage and Warehouse
+## Key Features
 
-- Local raw files are written to `data/raw/{source}/{date}/data.jsonl`
-- Raw files are uploaded to GCS under `raw/{source}/{date}/data.jsonl`
-- `warehouse/load_to_bigquery.py` loads raw JSONL files from GCS into BigQuery
+### 1. Batch Ingestion
 
-### 3. Orchestration
+- `ingestion/coingecko_ingest.py` fetches price snapshots
+- `ingestion/reddit_ingest.py` fetches Reddit post metadata
+- `ingestion/run_pipeline.py` runs both batch ingestors locally
 
-`dags/crypto_pipeline.py` orchestrates:
+### 2. Streaming Ingestion
 
-1. batch ingestion
-2. local non-empty data validation
-3. upload to GCS
-4. load to BigQuery raw tables
-5. raw table validation
-6. dbt run and dbt test
-7. daily mart completeness validation
+- `ingestion/binance_stream.py` streams BTCUSDT trades into BigQuery
+- `dags/streaming_monitor.py` validates freshness on a recurring schedule
 
-`dags/streaming_monitor.py` monitors delayed streaming in the BTC realtime table.
+### 3. Transformation Layer
 
-### 4. Monitoring and Alerting
-
-The project now includes:
-
-- Empty data detection for CoinGecko and Reddit batch inputs
-- Missing daily data checks for the `fct_crypto_daily` mart
-- Delayed streaming detection for the BTC realtime table
-- Airflow failure alerts through email and Slack webhook
-
-Detailed setup and operating steps are documented in [docs/monitoring.md](/abs/path/d:/crypto-data-pipeline/docs/monitoring.md:1).
-
-### 5. Transformation
-
-dbt models:
+dbt models include:
 
 - `stg_coingecko`
 - `stg_reddit`
+- `dim_coin`
+- `dim_date`
 - `fct_crypto_daily`
 
-Basic dbt tests are included for key columns and latest daily snapshot completeness.
+dbt tests cover:
+
+- `not_null`
+- `unique`
+- `relationships`
+- accepted numeric ranges
+- latest snapshot completeness for expected coins
+
+### 4. Data Quality and Monitoring
+
+The project includes multiple quality checkpoints:
+
+- Local raw file existence and non-empty validation
+- Raw BigQuery table row-count validation after load
+- Mart completeness validation for expected daily coin coverage
+- Streaming freshness validation for realtime BTC data
+
+Detailed monitoring setup is documented in
+[docs/monitoring.md](/d:/crypto-data-pipeline/docs/monitoring.md:1).
+
+### 5. Alerting
+
+Airflow failure callbacks send:
+
+- Email alerts when `ALERT_EMAIL_TO` is configured
+- Slack alerts when `SLACK_WEBHOOK_URL` is configured
+
+### 6. API Access
+
+- `api/main.py` exposes a simple FastAPI endpoint for daily crypto mart data
+
+### 7. CI and Code Quality
+
+GitHub Actions validates:
+
+- `black --check`
+- `isort --check-only`
+- `flake8`
+- `dbt deps`
+- `dbt parse`
+- `dbt run`
+- `dbt test`
+
+## Repository Structure
+
+```text
+api/                FastAPI service
+config/             Shared configuration
+crypto_transform/   dbt project
+dags/               Airflow DAGs
+data/               Local raw landing zone
+docs/               Project documentation
+ingestion/          Batch and streaming ingestion
+utils/              Shared helpers
+warehouse/          BigQuery load logic
+```
+
+## Pipeline Flow
+
+### Batch DAG: `crypto_pipeline_v2`
+
+Execution order:
+
+1. Fetch CoinGecko data
+2. Fetch Reddit data
+3. Validate local CoinGecko JSONL is not empty
+4. Validate local Reddit JSONL is not empty
+5. Upload both sources to GCS
+6. Load both sources into BigQuery raw tables
+7. Validate raw tables contain rows
+8. Run `dbt run`
+9. Run `dbt test`
+10. Validate the daily mart contains expected rows for the target date
+
+### Streaming Monitor DAG: `btc_streaming_monitor_v1`
+
+Execution purpose:
+
+1. Check the latest `event_time` in the realtime BTC table
+2. Fail if the table is empty
+3. Fail if no recent records exist inside the freshness window
+4. Fail if the newest record is older than the allowed delay
 
 ## Environment Variables
 
-You can configure the project with environment variables instead of hardcoding values:
+Core variables used by this project include:
 
 - `GCP_PROJECT_ID`
 - `GCP_LOCATION`
@@ -101,8 +185,6 @@ You can configure the project with environment variables instead of hardcoding v
 - `BQ_REDDIT_TABLE`
 - `BQ_BTC_REALTIME_TABLE`
 - `GOOGLE_APPLICATION_CREDENTIALS`
-- `DBT_PROJECT_DIR`
-- `DBT_PROFILES_DIR`
 - `EXPECTED_COIN_IDS`
 - `STREAMING_MAX_DELAY_MINUTES`
 - `STREAMING_MONITOR_SCHEDULE`
@@ -114,46 +196,117 @@ You can configure the project with environment variables instead of hardcoding v
 - `AIRFLOW__SMTP__SMTP_PORT`
 - `AIRFLOW__SMTP__SMTP_MAIL_FROM`
 
-## How To Run
+See `.env.example` and [docs/monitoring.md](/d:/crypto-data-pipeline/docs/monitoring.md:1)
+for setup details.
 
-### Local batch ingestion
+## Local Setup
+
+### 1. Install dependencies
+
+```bash
+pip install -r requirements.txt
+pip install black isort flake8 dbt-bigquery
+```
+
+### 2. Configure environment
+
+```bash
+cp .env.example .env
+```
+
+Then fill in your GCP, Airflow SMTP, and optional Slack configuration.
+
+### 3. Run batch ingestion locally
 
 ```bash
 python ingestion/run_pipeline.py
 ```
 
-### Load raw data to BigQuery
+### 4. Load raw data to BigQuery
 
 ```bash
 python warehouse/load_to_bigquery.py
 ```
 
-### Run dbt
+### 5. Run dbt
 
 ```bash
+dbt deps --project-dir crypto_transform --profiles-dir crypto_transform
 dbt run --project-dir crypto_transform --profiles-dir crypto_transform
 dbt test --project-dir crypto_transform --profiles-dir crypto_transform
 ```
 
-### Run streaming ingestion
-
-```bash
-python ingestion/binance_stream.py
-```
-
-### Run API
-
-```bash
-uvicorn api.main:app --reload
-```
-
-### Run Airflow
+### 6. Run Airflow
 
 ```bash
 docker compose up airflow-init
 docker compose up
 ```
 
-## Current Scope
+### 7. Run streaming ingestion
 
-This repository is a learning-focused project that demonstrates how the stack works end to end. It is not intended to be a production-grade platform yet, but the codebase is organized so it can evolve into a stronger portfolio project.
+```bash
+python ingestion/binance_stream.py
+```
+
+### 8. Run API
+
+```bash
+uvicorn api.main:app --reload
+```
+
+## Dashboard
+
+This project is designed to support a dashboard layer on top of BigQuery. A
+recommended dashboard improvement guide is available in
+[docs/dashboard_enhancement.md](/d:/crypto-data-pipeline/docs/dashboard_enhancement.md:1).
+
+Suggested dashboard sections:
+
+- Daily average price by coin
+- Reddit post volume by day
+- Reddit engagement by day
+- Latest BTC streaming freshness indicator
+- Daily data completeness / pipeline health indicator
+
+## Interview Storytelling
+
+An interview-ready project narrative is available in
+[docs/interview_storytelling.md](/d:/crypto-data-pipeline/docs/interview_storytelling.md:1).
+
+It includes:
+
+- concise elevator pitch
+- architecture walkthrough
+- technical tradeoffs
+- failure and recovery story
+- likely interview questions and strong answer angles
+
+## CI Workflow
+
+The GitHub Actions workflow is split into:
+
+- `lint`
+- `dbt-ci`
+
+This supports:
+
+- fail-fast feedback
+- easier debugging
+- reproducible checks with pinned tool versions
+- pip dependency caching
+
+## Future Improvements
+
+- Add partition-aware incremental dbt models
+- Add unit tests for ingestion and utility functions
+- Add dashboard screenshots and published report link
+- Introduce environment-specific deployment workflows
+- Add Terraform or infrastructure-as-code for GCP setup
+- Add data contracts or schema version validation
+
+## Why This Project Matters
+
+This repository is more than an ETL demo. It shows how to combine ingestion,
+warehousing, transformation, orchestration, monitoring, alerting, CI, and
+storytelling into a complete analytics engineering portfolio project.

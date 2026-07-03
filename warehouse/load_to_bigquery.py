@@ -1,6 +1,12 @@
 from google.cloud import bigquery
 
-from config.api_config import BUCKET_NAME, COINGECKO_TABLE_ID, REDDIT_TABLE_ID
+from config.api_config import (
+    BUCKET_NAME,
+    COINGECKO_TABLE_ID,
+    FEAR_GREED_TABLE_ID,
+    REDDIT_TABLE_ID,
+    TRENDING_COINS_TABLE_ID,
+)
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -17,6 +23,7 @@ def load_jsonl_from_gcs(gcs_uri: str, table_id: str) -> None:
     job_config = bigquery.LoadJobConfig(
         source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
         write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
+        autodetect=True,
     )
 
     try:
@@ -74,12 +81,34 @@ def load_reddit() -> None:
     )
 
 
+def load_fear_greed() -> None:
+
+    logger.info("Loading Fear & Greed data into BigQuery")
+
+    load_jsonl_from_gcs(
+        f"gs://{BUCKET_NAME}/raw/fear_greed/*/data.jsonl",
+        FEAR_GREED_TABLE_ID,
+    )
+
+
+def load_trending_coins() -> None:
+
+    logger.info("Loading Trending Coins data into BigQuery")
+
+    load_jsonl_from_gcs(
+        f"gs://{BUCKET_NAME}/raw/trending_coins/*/data.jsonl",
+        TRENDING_COINS_TABLE_ID,
+    )
+
+
 def load_all() -> None:
 
     logger.info("Starting warehouse load process")
 
     load_coingecko()
     load_reddit()
+    load_fear_greed()
+    load_trending_coins()
 
     logger.info("Completed warehouse load process")
 

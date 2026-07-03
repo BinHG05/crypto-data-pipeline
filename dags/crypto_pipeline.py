@@ -15,7 +15,9 @@ sys.path.append("/opt/airflow")
 from config.api_config import BUCKET_NAME
 from config.settings import ALERT_EMAIL_TO
 from ingestion.coingecko_ingest import fetch_coingecko
+from ingestion.fear_greed_ingest import fetch_fear_greed
 from ingestion.reddit_ingest import fetch_reddit
+from ingestion.trending_coins_ingest import fetch_trending_coins
 from utils.alerts import send_failure_alert
 from utils.monitoring import (
     RAW_TABLES,
@@ -87,6 +89,16 @@ with DAG(
         python_callable=fetch_reddit,
     )
 
+    fetch_fear_greed_task = PythonOperator(
+        task_id="fetch_fear_greed",
+        python_callable=fetch_fear_greed,
+    )
+
+    fetch_trending_coins_task = PythonOperator(
+        task_id="fetch_trending_coins",
+        python_callable=fetch_trending_coins,
+    )
+
     validate_coingecko_data_task = PythonOperator(
         task_id="validate_coingecko_local_data",
         python_callable=validate_local_source_data,
@@ -99,6 +111,18 @@ with DAG(
         op_args=["reddit"],
     )
 
+    validate_fear_greed_data_task = PythonOperator(
+        task_id="validate_fear_greed_local_data",
+        python_callable=validate_local_source_data,
+        op_args=["fear_greed"],
+    )
+
+    validate_trending_coins_data_task = PythonOperator(
+        task_id="validate_trending_coins_local_data",
+        python_callable=validate_local_source_data,
+        op_args=["trending_coins"],
+    )
+
     upload_coingecko_task = PythonOperator(
         task_id="upload_coingecko",
         python_callable=upload_source_to_gcs,
@@ -109,6 +133,18 @@ with DAG(
         task_id="upload_reddit",
         python_callable=upload_source_to_gcs,
         op_args=["reddit"],
+    )
+
+    upload_fear_greed_task = PythonOperator(
+        task_id="upload_fear_greed",
+        python_callable=upload_source_to_gcs,
+        op_args=["fear_greed"],
+    )
+
+    upload_trending_coins_task = PythonOperator(
+        task_id="upload_trending_coins",
+        python_callable=upload_source_to_gcs,
+        op_args=["trending_coins"],
     )
 
     load_bq_task = PythonOperator(
@@ -143,10 +179,19 @@ with DAG(
     )
 
     fetch_coingecko_task >> validate_coingecko_data_task >> upload_coingecko_task
-
     fetch_reddit_task >> validate_reddit_data_task >> upload_reddit_task
+    fetch_fear_greed_task >> validate_fear_greed_data_task >> upload_fear_greed_task
+    fetch_trending_coins_task >> validate_trending_coins_data_task >> upload_trending_coins_task
 
-    [upload_coingecko_task, upload_reddit_task] >> load_bq_task
+    (
+        [
+            upload_coingecko_task,
+            upload_reddit_task,
+            upload_fear_greed_task,
+            upload_trending_coins_task,
+        ]
+        >> load_bq_task
+    )
     (
         load_bq_task
         >> validate_loaded_raw_tables_task

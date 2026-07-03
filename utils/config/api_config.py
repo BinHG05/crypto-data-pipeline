@@ -11,6 +11,6 @@ if spec is None or spec.loader is None:
 
 spec.loader.exec_module(module)
 
-COINGECKO_API = module.COINGECKO_API
+COINGECKO_API = module.COINGECKO_API    
 REDDIT_API = module.REDDIT_API
 BUCKET_NAME = module.BUCKET_NAME

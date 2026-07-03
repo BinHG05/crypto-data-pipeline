@@ -22,6 +22,8 @@ MART_DATASET = get_env("BQ_MART_DATASET", "crypto_marts")
 COINGECKO_TABLE = get_env("BQ_COINGECKO_TABLE", "coingecko_prices")
 REDDIT_TABLE = get_env("BQ_REDDIT_TABLE", "reddit_posts")
 BTC_REALTIME_TABLE = get_env("BQ_BTC_REALTIME_TABLE", "btc_realtime")
+FEAR_GREED_TABLE = get_env("BQ_FEAR_GREED_TABLE", "fear_greed_index")
+TRENDING_COINS_TABLE = get_env("BQ_TRENDING_COINS_TABLE", "coingecko_trending")
 
 CREDENTIALS_PATH = get_env(
     "GOOGLE_APPLICATION_CREDENTIALS",
