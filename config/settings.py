@@ -17,6 +17,11 @@ GCP_PROJECT_ID = get_env("GCP_PROJECT_ID", "snappy-monolith-481115-e5")
 GCP_LOCATION = get_env("GCP_LOCATION", "asia-southeast1")
 GCS_BUCKET_NAME = get_env("GCS_BUCKET_NAME", "crypto-data-lake-subin")
 
+AWS_S3_BUCKET_NAME = get_env("AWS_S3_BUCKET_NAME", "crypto-data-lake-hg")
+AWS_ACCESS_KEY_ID = get_env("AWS_ACCESS_KEY_ID", "")
+AWS_SECRET_ACCESS_KEY = get_env("AWS_SECRET_ACCESS_KEY", "")
+AWS_REGION = get_env("AWS_DEFAULT_REGION", "ap-southeast-1")
+
 RAW_DATASET = get_env("BQ_RAW_DATASET", "crypto_dataset")
 MART_DATASET = get_env("BQ_MART_DATASET", "crypto_marts")
 COINGECKO_TABLE = get_env("BQ_COINGECKO_TABLE", "coingecko_prices")

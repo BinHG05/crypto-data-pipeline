@@ -74,7 +74,7 @@ def _request_reddit_json(session: requests.Session) -> dict:
         f"last_status_code={last_status_code}"
     )
     return _build_fallback_reddit_data()
-
+    
 
 def fetch_reddit():
 
@@ -92,12 +92,20 @@ def fetch_reddit():
     for item in children:
         post = item.get("data", {})
 
+        created_utc_raw = post.get("created_utc")
+        created_utc_ts = None
+        if created_utc_raw is not None:
+            try:
+                created_utc_ts = datetime.utcfromtimestamp(float(created_utc_raw)).strftime("%Y-%m-%d %H:%M:%S")
+            except (ValueError, TypeError):
+                pass
+
         posts.append(
             {
                 "id": post.get("id"),
                 "title": post.get("title"),
                 "score": post.get("score"),
-                "created_utc": post.get("created_utc"),
+                "created_utc": created_utc_ts,
                 "url": post.get("url"),
             }
         )

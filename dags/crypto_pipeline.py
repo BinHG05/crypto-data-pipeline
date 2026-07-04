@@ -59,6 +59,22 @@ def upload_source_to_gcs(source: str) -> None:
     logger.info(f"Upload completed for {source}")
 
 
+def convert_and_upload_source_to_s3(source: str) -> None:
+    from utils.s3_utils import convert_and_upload_to_s3
+
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    local_file = Path(f"/opt/airflow/data/raw/{source}/{today}/data.jsonl")
+
+    if not local_file.exists():
+        logger.warning(f"No local file found for S3 upload of {source}")
+        raise AirflowSkipException(f"No data for {source}")
+
+    s3_key = f"raw/{source}/{today}/data.parquet"
+    logger.info(f"Converting and uploading {source} data to S3 as Parquet")
+    convert_and_upload_to_s3(str(local_file), s3_key)
+    logger.info(f"S3 Parquet upload completed for {source}")
+
+
 def validate_local_source_data(source: str) -> None:
     record_count = assert_non_empty_local_jsonl(source)
     if record_count <= 0:
@@ -129,9 +145,21 @@ with DAG(
         op_args=["coingecko"],
     )
 
+    upload_coingecko_s3_task = PythonOperator(
+        task_id="upload_coingecko_s3",
+        python_callable=convert_and_upload_source_to_s3,
+        op_args=["coingecko"],
+    )
+
     upload_reddit_task = PythonOperator(
         task_id="upload_reddit",
         python_callable=upload_source_to_gcs,
+        op_args=["reddit"],
+    )
+
+    upload_reddit_s3_task = PythonOperator(
+        task_id="upload_reddit_s3",
+        python_callable=convert_and_upload_source_to_s3,
         op_args=["reddit"],
     )
 
@@ -141,9 +169,21 @@ with DAG(
         op_args=["fear_greed"],
     )
 
+    upload_fear_greed_s3_task = PythonOperator(
+        task_id="upload_fear_greed_s3",
+        python_callable=convert_and_upload_source_to_s3,
+        op_args=["fear_greed"],
+    )
+
     upload_trending_coins_task = PythonOperator(
         task_id="upload_trending_coins",
         python_callable=upload_source_to_gcs,
+        op_args=["trending_coins"],
+    )
+
+    upload_trending_coins_s3_task = PythonOperator(
+        task_id="upload_trending_coins_s3",
+        python_callable=convert_and_upload_source_to_s3,
         op_args=["trending_coins"],
     )
 
@@ -161,7 +201,8 @@ with DAG(
         task_id="dbt_run",
         bash_command="""
         cd /opt/airflow/crypto_transform &&
-        dbt run --fail-fast
+        dbt deps &&
+        dbt run --profiles-dir . --fail-fast
         """,
     )
 
@@ -169,19 +210,21 @@ with DAG(
         task_id="dbt_test",
         bash_command="""
         cd /opt/airflow/crypto_transform &&
-        dbt test --fail-fast
+        dbt deps &&
+        dbt test --profiles-dir . --fail-fast
         """,
     )
+
 
     validate_daily_mart_task = PythonOperator(
         task_id="validate_daily_mart_data",
         python_callable=assert_expected_daily_mart_rows,
     )
 
-    fetch_coingecko_task >> validate_coingecko_data_task >> upload_coingecko_task
-    fetch_reddit_task >> validate_reddit_data_task >> upload_reddit_task
-    fetch_fear_greed_task >> validate_fear_greed_data_task >> upload_fear_greed_task
-    fetch_trending_coins_task >> validate_trending_coins_data_task >> upload_trending_coins_task
+    fetch_coingecko_task >> validate_coingecko_data_task >> [upload_coingecko_task, upload_coingecko_s3_task]
+    fetch_reddit_task >> validate_reddit_data_task >> [upload_reddit_task, upload_reddit_s3_task]
+    fetch_fear_greed_task >> validate_fear_greed_data_task >> [upload_fear_greed_task, upload_fear_greed_s3_task]
+    fetch_trending_coins_task >> validate_trending_coins_data_task >> [upload_trending_coins_task, upload_trending_coins_s3_task]
 
     (
         [
