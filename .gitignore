@@ -1,18 +1,50 @@
+# === Security & Local Environment ===
 gcp-key.json
 .env
+*.json
+profiles.yml
+.user.yml
+sitecustomize.py
+config/airflow.cfg
+
+# === Python & Virtual Environments ===
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# === Data & Execution Logs ===
 logs/
 data/
 data/raw/
-logs/
-sitecustomize.py
-config/airflow.cfg
-# dbt profiles
-profiles.yml
+*.log
 
-# Personal config
-.user.yml
+# === dbt Project Artifacts ===
+crypto_transform/target/
+crypto_transform/dbt_packages/
+crypto_transform/logs/
 
-# Google Cloud Keys (Quan trọng nhất)
-*.json
+# === IDEs & Editors ===
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# === OS Files ===
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db

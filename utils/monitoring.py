@@ -9,11 +9,13 @@ from config.settings import (
     BTC_REALTIME_TABLE,
     COINGECKO_TABLE,
     EXPECTED_COIN_IDS,
+    FEAR_GREED_TABLE,
     GCP_PROJECT_ID,
     MART_DATASET,
     RAW_DATASET,
     REDDIT_TABLE,
     STREAMING_MAX_DELAY_MINUTES,
+    TRENDING_COINS_TABLE,
 )
 from utils.logger import get_logger
 
@@ -179,4 +181,6 @@ def assert_raw_table_has_rows_for_source(source: str, table_name: str) -> None:
 RAW_TABLES = {
     "coingecko": COINGECKO_TABLE,
     "reddit": REDDIT_TABLE,
+    "fear_greed": FEAR_GREED_TABLE,
+    "trending_coins": TRENDING_COINS_TABLE,
 }
