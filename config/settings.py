@@ -21,6 +21,7 @@ AWS_S3_BUCKET_NAME = get_env("AWS_S3_BUCKET_NAME", "crypto-data-lake-hg")
 AWS_ACCESS_KEY_ID = get_env("AWS_ACCESS_KEY_ID", "")
 AWS_SECRET_ACCESS_KEY = get_env("AWS_SECRET_ACCESS_KEY", "")
 AWS_REGION = get_env("AWS_DEFAULT_REGION", "ap-southeast-1")
+AWS_GLUE_ROLE_ARN = get_env("AWS_GLUE_ROLE_ARN", "")
 
 RAW_DATASET = get_env("BQ_RAW_DATASET", "crypto_dataset")
 MART_DATASET = get_env("BQ_MART_DATASET", "crypto_marts")
