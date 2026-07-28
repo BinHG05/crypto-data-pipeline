@@ -5,7 +5,13 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def get_env(name: str, default: str) -> str:
-    return os.getenv(name, default).strip()
+    """Retrieve configuration or secret with fallback support."""
+    try:
+        from utils.secrets_manager import get_secret
+
+        return get_secret(name, default)
+    except ImportError:
+        return os.getenv(name, default).strip()
 
 
 def get_env_list(name: str, default: str) -> list[str]:
@@ -44,6 +50,8 @@ STREAMING_MAX_DELAY_MINUTES = int(get_env("STREAMING_MAX_DELAY_MINUTES", "10"))
 STREAMING_MONITOR_SCHEDULE = get_env("STREAMING_MONITOR_SCHEDULE", "*/5 * * * *")
 ALERT_EMAIL_TO = get_env_list("ALERT_EMAIL_TO", "")
 SLACK_WEBHOOK_URL = get_env("SLACK_WEBHOOK_URL", "")
+TELEGRAM_BOT_TOKEN = get_env("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT_ID = get_env("TELEGRAM_CHAT_ID", "")
 
 
 def bq_table_id(dataset: str, table: str) -> str:

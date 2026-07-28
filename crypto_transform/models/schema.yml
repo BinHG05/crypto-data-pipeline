@@ -104,6 +104,22 @@ models:
         tests:
           - not_null
 
+  - name: dim_coin
+    description: Unique crypto token dimension table.
+    columns:
+      - name: coin_id
+        tests:
+          - not_null
+          - unique
+
+  - name: dim_date
+    description: Date dimension table for calendar reporting.
+    columns:
+      - name: date
+        tests:
+          - not_null
+          - unique
+
   - name: fct_crypto_daily
     description: Daily mart combining pricing and Reddit engagement metrics.
     tests:
@@ -111,6 +127,10 @@ models:
           arguments:
             expression: "avg_price >= 0"
     columns:
+      - name: record_id
+        tests:
+          - not_null
+          - unique
       - name: report_date
         tests:
           - not_null
@@ -125,10 +145,15 @@ models:
               arguments:
                 to: ref('dim_coin')
                 field: coin_id
-      - name: record_id
+      - name: avg_price
         tests:
           - not_null
-          - unique
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+      - name: reddit_posts
+        tests:
+          - not_null
 
   - name: fct_market_insights
     description: Daily insights combining prices, Reddit engagement, Fear & Greed index, trending status, and composite metrics.
@@ -151,6 +176,16 @@ models:
               arguments:
                 to: ref('dim_coin')
                 field: coin_id
+      - name: avg_price
+        tests:
+          - not_null
+      - name: fng_value
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100
       - name: sentiment_score
         tests:
           - not_null
@@ -158,4 +193,5 @@ models:
               arguments:
                 min_value: 0
                 max_value: 100
+
 

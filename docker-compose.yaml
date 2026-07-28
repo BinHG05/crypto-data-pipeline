@@ -86,6 +86,7 @@ x-airflow-common: &airflow-common
     - ${AIRFLOW_PROJ_DIR:-.}/warehouse:/opt/airflow/warehouse
     - ${AIRFLOW_PROJ_DIR:-.}/crypto_transform:/opt/airflow/crypto_transform
     - ${AIRFLOW_PROJ_DIR:-.}/data:/opt/airflow/data
+    - ${AIRFLOW_PROJ_DIR:-.}/tests:/opt/airflow/tests
     - ${AIRFLOW_PROJ_DIR:-.}/gcp-key.json:/opt/airflow/gcp-key.json
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on: &airflow-common-depends-on

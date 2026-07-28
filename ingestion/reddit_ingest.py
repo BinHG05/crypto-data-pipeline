@@ -14,6 +14,7 @@ import requests
 
 from config.api_config import REDDIT_API
 from utils.file_utils import save_json
+from utils.schema_validator import RedditRecord, validate_records
 
 
 def _build_fallback_reddit_data() -> dict:
@@ -74,7 +75,7 @@ def _request_reddit_json(session: requests.Session) -> dict:
         f"last_status_code={last_status_code}"
     )
     return _build_fallback_reddit_data()
-    
+
 
 def fetch_reddit():
 
@@ -96,7 +97,9 @@ def fetch_reddit():
         created_utc_ts = None
         if created_utc_raw is not None:
             try:
-                created_utc_ts = datetime.utcfromtimestamp(float(created_utc_raw)).strftime("%Y-%m-%d %H:%M:%S")
+                created_utc_ts = datetime.utcfromtimestamp(
+                    float(created_utc_raw)
+                ).strftime("%Y-%m-%d %H:%M:%S")
             except (ValueError, TypeError):
                 pass
 
@@ -116,7 +119,10 @@ def fetch_reddit():
         logger.error("Reddit API returned empty dataset")
         raise ValueError("Reddit API returned empty dataset")
 
-    save_json(posts, "reddit")
+    # Schema Drift Guard: Pydantic Validation Gate
+    validated_posts = validate_records(posts, RedditRecord, "Reddit")
+
+    save_json(validated_posts, "reddit")
 
     logger.info("Saved Reddit raw data successfully")
 

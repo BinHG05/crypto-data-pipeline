@@ -64,7 +64,9 @@ def create_or_update_crawler(glue_client):
     if not AWS_GLUE_ROLE_ARN or "your_account_id" in AWS_GLUE_ROLE_ARN:
         logger.error("AWS_GLUE_ROLE_ARN is not configured properly in settings or env!")
         print("\n[ERROR] AWS_GLUE_ROLE_ARN variable is missing or using placeholder.")
-        print("Please configure a valid AWS_GLUE_ROLE_ARN in your .env file before running.")
+        print(
+            "Please configure a valid AWS_GLUE_ROLE_ARN in your .env file before running."
+        )
         sys.exit(1)
 
     targets = {
@@ -80,7 +82,9 @@ def create_or_update_crawler(glue_client):
     try:
         # Check if crawler exists
         glue_client.get_crawler(Name=CRAWLER_NAME)
-        logger.info(f"Crawler '{CRAWLER_NAME}' already exists. Updating configuration...")
+        logger.info(
+            f"Crawler '{CRAWLER_NAME}' already exists. Updating configuration..."
+        )
 
         # Update crawler
         glue_client.update_crawler(
@@ -169,11 +173,15 @@ def main():
     create_or_update_crawler(client)
 
     # Prompt option to trigger run
-    run_now = input("\nDo you want to run the crawler right now? (y/n): ").strip().lower()
+    run_now = (
+        input("\nDo you want to run the crawler right now? (y/n): ").strip().lower()
+    )
     if run_now == "y":
         run_crawler_and_wait(client)
     else:
-        print("\nSetup finished. You can run the crawler manually in AWS Console or call:")
+        print(
+            "\nSetup finished. You can run the crawler manually in AWS Console or call:"
+        )
         print(f"aws glue start-crawler --name {CRAWLER_NAME}")
 
 

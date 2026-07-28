@@ -14,6 +14,7 @@ import requests
 
 from config.api_config import COINGECKO_TRENDING_API
 from utils.file_utils import save_json
+from utils.schema_validator import TrendingCoinRecord, validate_records
 
 
 def transform_trending_coins(data):
@@ -75,7 +76,10 @@ def fetch_trending_coins():
         logger.error("CoinGecko Trending returned empty dataset")
         raise ValueError("CoinGecko Trending returned empty dataset")
 
-    save_json(result, "trending_coins")
+    # Schema Drift Guard: Pydantic Validation Gate
+    validated_result = validate_records(result, TrendingCoinRecord, "TrendingCoins")
+
+    save_json(validated_result, "trending_coins")
     logger.info("Saved CoinGecko Trending raw data successfully")
 
 

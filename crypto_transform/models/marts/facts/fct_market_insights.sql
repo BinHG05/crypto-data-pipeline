@@ -1,5 +1,7 @@
 {{ config(
-    materialized='table',
+    materialized='incremental',
+    unique_key='record_id',
+    incremental_strategy='merge',
     partition_by={
         "field": "report_date",
         "data_type": "date"
@@ -13,6 +15,11 @@ WITH daily_prices AS (
         coin_id,
         AVG(price_usd) AS avg_price
     FROM {{ ref('stg_coingecko') }}
+    {% if is_incremental() %}
+      -- We must fetch the last 7 days of source data + 2 days of lookback = 9 days total (INTERVAL 8 DAY)
+      -- to allow the 7-day rolling window averages to compute correctly for the updated dates!
+      WHERE DATE(recorded_at) >= (SELECT DATE_SUB(MAX(report_date), INTERVAL 8 DAY) FROM {{ this }})
+    {% endif %}
     GROUP BY 1, 2
 ),
 
@@ -22,6 +29,9 @@ daily_discussions AS (
         COUNT(post_id) AS total_posts,
         SUM(score) AS total_engagement
     FROM {{ ref('stg_reddit') }}
+    {% if is_incremental() %}
+        WHERE report_date >= (SELECT DATE_SUB(MAX(report_date), INTERVAL 8 DAY) FROM {{ this }})
+    {% endif %}
     GROUP BY 1
 ),
 
@@ -31,6 +41,9 @@ daily_fng AS (
         fng_value,
         fng_classification
     FROM {{ ref('stg_fear_greed') }}
+    {% if is_incremental() %}
+        WHERE report_date >= (SELECT DATE_SUB(MAX(report_date), INTERVAL 8 DAY) FROM {{ this }})
+    {% endif %}
 ),
 
 daily_trending AS (
@@ -39,6 +52,9 @@ daily_trending AS (
         coin_id,
         trending_score
     FROM {{ ref('stg_trending_coins') }}
+    {% if is_incremental() %}
+        WHERE report_date >= (SELECT DATE_SUB(MAX(report_date), INTERVAL 8 DAY) FROM {{ this }})
+    {% endif %}
 ),
 
 joined AS (
@@ -109,3 +125,7 @@ SELECT
     avg_reddit_posts_7d,
     COALESCE(price_social_corr_7d, 0.0) AS price_social_corr_7d
 FROM calculated_metrics
+{% if is_incremental() %}
+  -- Filter to only insert the newly calculated day(s) into the target table
+  WHERE report_date >= (SELECT MAX(report_date) FROM {{ this }})
+{% endif %}

@@ -16,7 +16,7 @@ from config.settings import (
 COINGECKO_API = {
     "url": "https://api.coingecko.com/api/v3/simple/price",
     "params": {
-        "ids": "bitcoin,ethereum",
+        "ids": "bitcoin,ethereum,solana,cardano,ripple,polkadot,avalanche-2,dogecoin",
         "vs_currencies": "usd",
     },
 }
@@ -32,7 +32,7 @@ REDDIT_API = {
         "https://www.reddit.com/r/Bitcoin/hot.json",
     ],
     "params": {
-        "limit": 10,
+        "limit": 50,
         "raw_json": 1,
     },
     "headers": {
@@ -44,7 +44,7 @@ REDDIT_API = {
 FEAR_GREED_API = {
     "url": "https://api.alternative.me/fng/",
     "params": {
-        "limit": 10,
+        "limit": 30,
         "format": "json",
     },
 }
