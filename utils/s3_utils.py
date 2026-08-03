@@ -38,7 +38,9 @@ def get_s3_client():
 
 def convert_jsonl_to_parquet(jsonl_path: Path, parquet_path: Path) -> bool:
     """Converts a local JSONL file to a Parquet file."""
-    logger.info(f"Converting JSONL to Parquet | source={jsonl_path} | target={parquet_path}")
+    logger.info(
+        f"Converting JSONL to Parquet | source={jsonl_path} | target={parquet_path}"
+    )
     try:
         jsonl_path = Path(jsonl_path)
         parquet_path = Path(parquet_path)
@@ -67,12 +69,16 @@ def convert_jsonl_to_parquet(jsonl_path: Path, parquet_path: Path) -> bool:
         raise e
 
 
-def upload_parquet_to_s3(parquet_path: Path, s3_key: str, bucket_name: str | None = None) -> None:
+def upload_parquet_to_s3(
+    parquet_path: Path, s3_key: str, bucket_name: str | None = None
+) -> None:
     """Uploads a local Parquet file to AWS S3."""
     target_bucket = bucket_name or AWS_S3_BUCKET_NAME
     if not target_bucket:
         logger.error("No S3 bucket name configured.")
-        raise ValueError("S3 bucket name must be specified in settings or function call.")
+        raise ValueError(
+            "S3 bucket name must be specified in settings or function call."
+        )
 
     logger.info(
         f"Uploading Parquet to S3 | file={parquet_path} | bucket={target_bucket} | key={s3_key}"
@@ -96,7 +102,9 @@ def upload_parquet_to_s3(parquet_path: Path, s3_key: str, bucket_name: str | Non
         raise e
 
 
-def convert_and_upload_to_s3(jsonl_path: str, s3_key: str, bucket_name: str | None = None) -> None:
+def convert_and_upload_to_s3(
+    jsonl_path: str, s3_key: str, bucket_name: str | None = None
+) -> None:
     """Combines conversion and S3 upload into a single process for pipeline integration."""
     json_p = Path(jsonl_path)
     parquet_p = json_p.with_suffix(".parquet")
@@ -113,4 +121,3 @@ def convert_and_upload_to_s3(jsonl_path: str, s3_key: str, bucket_name: str | No
     if parquet_p.exists():
         parquet_p.unlink()
         logger.info(f"Cleaned up local temporary parquet file: {parquet_p}")
-    

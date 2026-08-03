@@ -215,16 +215,31 @@ with DAG(
         """,
     )
 
-
     validate_daily_mart_task = PythonOperator(
         task_id="validate_daily_mart_data",
         python_callable=assert_expected_daily_mart_rows,
     )
 
-    fetch_coingecko_task >> validate_coingecko_data_task >> [upload_coingecko_task, upload_coingecko_s3_task]
-    fetch_reddit_task >> validate_reddit_data_task >> [upload_reddit_task, upload_reddit_s3_task]
-    fetch_fear_greed_task >> validate_fear_greed_data_task >> [upload_fear_greed_task, upload_fear_greed_s3_task]
-    fetch_trending_coins_task >> validate_trending_coins_data_task >> [upload_trending_coins_task, upload_trending_coins_s3_task]
+    (
+        fetch_coingecko_task
+        >> validate_coingecko_data_task
+        >> [upload_coingecko_task, upload_coingecko_s3_task]
+    )
+    (
+        fetch_reddit_task
+        >> validate_reddit_data_task
+        >> [upload_reddit_task, upload_reddit_s3_task]
+    )
+    (
+        fetch_fear_greed_task
+        >> validate_fear_greed_data_task
+        >> [upload_fear_greed_task, upload_fear_greed_s3_task]
+    )
+    (
+        fetch_trending_coins_task
+        >> validate_trending_coins_data_task
+        >> [upload_trending_coins_task, upload_trending_coins_s3_task]
+    )
 
     (
         [

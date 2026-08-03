@@ -18,7 +18,7 @@ from utils.file_utils import save_json
 
 def transform_fear_greed(data):
     result = []
-    
+
     for item in data.get("data", []):
         try:
             ts = int(item.get("timestamp"))
