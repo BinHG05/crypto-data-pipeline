@@ -44,7 +44,7 @@ http://localhost:8080/log?dag_id=crypto_pipeline_v2&task_id=fetch_coingecko
 
 ### Environment Settings Required (`.env`):
 ```env
-TELEGRAM_BOT_TOKEN=8751695260:AAEsJ4HC5vqbmhJocl-3dkDIkj2d39eNQyM
+TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHAT_ID=6189997335
 ```
 
