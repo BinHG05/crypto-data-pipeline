@@ -1,5 +1,4 @@
 import os
-import sys
 from pathlib import Path
 
 import pandas as pd
@@ -25,14 +24,14 @@ st.markdown(
         color: #c9d1d9;
         font-family: 'Outfit', sans-serif;
     }
-    
+
     /* Headers styling */
     h1, h2, h3 {
         color: #ffffff !important;
         font-weight: 700;
         letter-spacing: -0.5px;
     }
-    
+
     /* Top metric cards (Glassmorphic) */
     .metric-card {
         background: rgba(22, 27, 34, 0.7);
@@ -61,7 +60,7 @@ st.markdown(
         font-weight: 600;
         margin-top: 5px;
     }
-    
+
     /* Panel for welcome prompt */
     .welcome-panel {
         background: rgba(22, 27, 34, 0.9);
@@ -73,12 +72,12 @@ st.markdown(
         margin: 50px auto;
         box-shadow: 0 8px 30px rgba(0,0,0,0.5);
     }
-    
+
     /* Glowing accents */
     .glow-green { color: #39d353 !important; }
     .glow-yellow { color: #f9e2af !important; }
     .glow-red { color: #f85149 !important; }
-    
+
     /* Sidebar styling */
     section[data-testid="stSidebar"] {
         background-color: #161b22 !important;
@@ -232,9 +231,9 @@ if not st.session_state.data_loaded:
                 # 1. Fetch historical Fear & Greed (covers current too)
                 st.session_state.fg_history_df = run_query(
                     """
-                    SELECT CAST(value AS INT) as value, value_classification, dt 
-                    FROM crypto_athena.fear_greed_index 
-                    ORDER BY dt DESC 
+                    SELECT CAST(value AS INT) as value, value_classification, dt
+                    FROM crypto_athena.fear_greed_index
+                    ORDER BY dt DESC
                     LIMIT 30
                 """
                 )
@@ -242,7 +241,7 @@ if not st.session_state.data_loaded:
                 # 2. Fetch latest prices for summary metrics
                 st.session_state.prices_df = run_query(
                     """
-                    SELECT 
+                    SELECT
                         CASE LOWER(symbol)
                             WHEN 'bitcoin' THEN 'btc'
                             WHEN 'ethereum' THEN 'eth'

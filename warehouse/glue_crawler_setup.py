@@ -1,4 +1,3 @@
-import os
 import sys
 import time
 from pathlib import Path
@@ -162,7 +161,7 @@ def run_crawler_and_wait(glue_client):
 
 
 def main():
-    print(f"--- AWS Glue Catalog Setup ---")
+    print("--- AWS Glue Catalog Setup ---")
     print(f"Bucket target: s3://{AWS_S3_BUCKET_NAME}/raw/")
     print(f"Glue Database: {DATABASE_NAME}")
     print(f"Glue IAM Role ARN: {AWS_GLUE_ROLE_ARN}")

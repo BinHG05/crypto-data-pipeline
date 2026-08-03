@@ -3,7 +3,6 @@ Data Lake Compaction Utility (Small Files Optimizer)
 Merges raw JSON files into optimized, compressed Parquet files for fast query performance.
 """
 
-import os
 import sys
 from pathlib import Path
 

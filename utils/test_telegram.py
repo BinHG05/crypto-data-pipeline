@@ -4,7 +4,6 @@ Usage:
     docker compose exec airflow-scheduler python /opt/airflow/utils/test_telegram.py
 """
 
-import os
 import sys
 from pathlib import Path
 
