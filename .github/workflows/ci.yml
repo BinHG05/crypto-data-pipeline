@@ -1,0 +1,129 @@
+name: Crypto Pipeline CI/CD Quality Gate & Deployment
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - "feature/**"
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  # ==========================================
+  # CONTINUOUS INTEGRATION (CI) STAGE
+  # ==========================================
+  lint:
+    name: 🎨 Code Formatting & Linting (CI)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install tools
+        run: |
+          pip install black==24.10.0 flake8==7.1.1 pytest
+
+      - name: Run Black check
+        run: black --check .
+
+      - name: Run flake8 check
+        run: flake8 . --ignore=E501,W503,E402
+
+  unit-tests:
+    name: 🧪 Automated Pytest Unit Quality Gates (CI)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run Pytest
+        env:
+          PYTHONPATH: .
+        run: pytest tests/
+
+  dbt-compile:
+    name: 🧱 dbt Model Compilation & Validation (CI)
+    needs: [lint, unit-tests]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./crypto_transform
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dbt
+        run: |
+          pip install dbt-bigquery==1.11.1
+
+      - name: Install dbt packages
+        run: dbt deps
+
+      - name: Create dummy dbt profile for parse validation
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml <<EOF
+          crypto_transform:
+            target: dev
+            outputs:
+              dev:
+                type: bigquery
+                method: service-account
+                project: "dummy-project"
+                dataset: "dummy_dataset"
+                keyfile: "/tmp/dummy.json"
+          EOF
+
+      - name: Validate dbt Syntax (Parse)
+        run: dbt parse
+
+  # ==========================================
+  # CONTINUOUS DEPLOYMENT (CD) STAGE
+  # (Triggers ONLY on merge/push to 'main' branch)
+  # ==========================================
+  deploy:
+    name: 🚀 Continuous Deployment (CD) to Production
+    needs: [lint, unit-tests, dbt-compile]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy DAGs & Ingestion Code to Production Airflow
+        run: |
+          echo "🚀 Deploying DAGs and Ingestion scripts to Production Airflow..."
+          # Production command example:
+          # gsutil -m rsync -r ./dags gs://us-central1-crypto-composer-bucket/dags
+          echo "✅ Production Code & DAGs successfully deployed!"
+
+      - name: Deploy & Run Production dbt Transformations
+        run: |
+          echo "🧱 Deploying dbt models to BigQuery Production Data Warehouse..."
+          echo "✅ Production Data Marts successfully deployed!"

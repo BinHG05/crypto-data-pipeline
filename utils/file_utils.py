@@ -17,7 +17,8 @@ def save_json(data, source):
     file_path = f"{dir_path}/data.jsonl"
 
     logger.info(
-        f"Saving raw records to local file | source={source} | records={len(data)} | file={file_path}"
+        "Saving raw records to local file | "
+        f"source={source} | records={len(data)} | file={file_path}"
     )
 
     try:
@@ -26,7 +27,8 @@ def save_json(data, source):
                 f.write(json.dumps(record) + "\n")
     except OSError as exc:
         logger.error(
-            f"Failed to save local raw data | source={source} | file={file_path} | error={exc}"
+            "Failed to save local raw data | "
+            f"source={source} | file={file_path} | error={exc}"
         )
         raise
 

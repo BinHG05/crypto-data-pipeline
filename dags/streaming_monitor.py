@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta
 import sys
+from datetime import datetime, timedelta
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
@@ -9,7 +9,6 @@ sys.path.append("/opt/airflow")
 from config.settings import ALERT_EMAIL_TO, STREAMING_MONITOR_SCHEDULE
 from utils.alerts import send_failure_alert
 from utils.monitoring import assert_streaming_is_fresh
-
 
 default_args = {
     "owner": "dat",

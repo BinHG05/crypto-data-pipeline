@@ -9,11 +9,13 @@ from config.settings import (
     BTC_REALTIME_TABLE,
     COINGECKO_TABLE,
     EXPECTED_COIN_IDS,
+    FEAR_GREED_TABLE,
     GCP_PROJECT_ID,
     MART_DATASET,
     RAW_DATASET,
     REDDIT_TABLE,
     STREAMING_MAX_DELAY_MINUTES,
+    TRENDING_COINS_TABLE,
 )
 from utils.logger import get_logger
 
@@ -35,7 +37,9 @@ def assert_non_empty_local_jsonl(source: str, date_str: str | None = None) -> in
     batch_date = _resolve_batch_date(date_str)
     file_path = Path(f"/opt/airflow/data/raw/{source}/{batch_date}/data.jsonl")
 
-    logger.info(f"Checking local raw file for emptiness | source={source} | file={file_path}")
+    logger.info(
+        f"Checking local raw file for emptiness | source={source} | file={file_path}"
+    )
 
     if not file_path.exists():
         raise FileNotFoundError(f"Expected raw file does not exist: {file_path}")
@@ -45,7 +49,8 @@ def assert_non_empty_local_jsonl(source: str, date_str: str | None = None) -> in
         raise ValueError(f"Raw file is empty: {file_path}")
 
     logger.info(
-        f"Validated non-empty local raw file successfully | source={source} | records={record_count}"
+        "Validated non-empty local raw file successfully | "
+        f"source={source} | records={record_count}"
     )
     return record_count
 
@@ -55,7 +60,8 @@ def assert_expected_daily_mart_rows(date_str: str | None = None) -> None:
     table_id = f"{GCP_PROJECT_ID}.{MART_DATASET}.fct_crypto_daily"
 
     logger.info(
-        f"Checking daily mart completeness | table={table_id} | report_date={batch_date}"
+        "Checking daily mart completeness | "
+        f"table={table_id} | report_date={batch_date}"
     )
 
     query = f"""
@@ -78,18 +84,18 @@ def assert_expected_daily_mart_rows(date_str: str | None = None) -> None:
     missing_coins = sorted(set(EXPECTED_COIN_IDS) - set(actual_coin_ids))
 
     if row.row_count <= 0:
-        raise ValueError(
-            f"Missing daily mart data for {batch_date} in {table_id}"
-        )
+        raise ValueError(f"Missing daily mart data for {batch_date} in {table_id}")
 
     if missing_coins:
         raise ValueError(
-            f"Daily mart data incomplete for {batch_date}. Missing coins: {', '.join(missing_coins)}"
+            "Daily mart data incomplete for "
+            f"{batch_date}. Missing coins: {', '.join(missing_coins)}"
         )
 
     logger.info(
         "Validated daily mart completeness successfully | "
-        f"report_date={batch_date} | rows={row.row_count} | coins={','.join(actual_coin_ids)}"
+        f"report_date={batch_date} | rows={row.row_count} | "
+        f"coins={','.join(actual_coin_ids)}"
     )
 
 
@@ -98,13 +104,19 @@ def assert_streaming_is_fresh(max_delay_minutes: int | None = None) -> None:
     table_id = f"{GCP_PROJECT_ID}.{RAW_DATASET}.{BTC_REALTIME_TABLE}"
 
     logger.info(
-        f"Checking streaming freshness | table={table_id} | max_delay_minutes={delay_minutes}"
+        "Checking streaming freshness | "
+        f"table={table_id} | max_delay_minutes={delay_minutes}"
     )
 
     query = f"""
         SELECT
             MAX(event_time) AS last_event_time,
-            COUNTIF(event_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL @delay_minutes MINUTE)) AS recent_row_count
+            COUNTIF(
+                event_time >= TIMESTAMP_SUB(
+                    CURRENT_TIMESTAMP(),
+                    INTERVAL @delay_minutes MINUTE
+                )
+            ) AS recent_row_count
         FROM `{table_id}`
     """
 
@@ -128,17 +140,21 @@ def assert_streaming_is_fresh(max_delay_minutes: int | None = None) -> None:
 
     if age > max_allowed_age:
         raise ValueError(
-            f"Streaming data delayed. Last event at {last_event_time.isoformat()} UTC, age={age}"
+            "Streaming data delayed. "
+            f"Last event at {last_event_time.isoformat()} UTC, age={age}"
         )
 
     if row.recent_row_count <= 0:
         raise ValueError(
-            f"No streaming rows found in the last {delay_minutes} minutes for {table_id}"
+            "No streaming rows found in the last "
+            f"{delay_minutes} minutes for {table_id}"
         )
 
     logger.info(
         "Validated streaming freshness successfully | "
-        f"table={table_id} | last_event_time={last_event_time.isoformat()} | recent_rows={row.recent_row_count}"
+        f"table={table_id} | "
+        f"last_event_time={last_event_time.isoformat()} | "
+        f"recent_rows={row.recent_row_count}"
     )
 
 
@@ -157,11 +173,14 @@ def assert_raw_table_has_rows_for_source(source: str, table_name: str) -> None:
         raise ValueError(f"Loaded raw table is empty for source {source}: {table_id}")
 
     logger.info(
-        f"Validated raw table contains data | source={source} | table={table_id} | rows={row.row_count}"
+        "Validated raw table contains data | "
+        f"source={source} | table={table_id} | rows={row.row_count}"
     )
 
 
 RAW_TABLES = {
     "coingecko": COINGECKO_TABLE,
     "reddit": REDDIT_TABLE,
+    "fear_greed": FEAR_GREED_TABLE,
+    "trending_coins": TRENDING_COINS_TABLE,
 }

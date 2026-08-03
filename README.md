@@ -1,159 +1,154 @@
-# Crypto Data Pipeline
+# Production-Inspired Crypto Analytics Platform | Multi-Cloud POC
 
-End-to-end learning project for data engineering on GCP using batch ingestion, streaming ingestion, orchestration, warehousing, transformation, and BI reporting.
+An end-to-end multi-cloud data engineering platform that ingests cryptocurrency market and social sentiments, stores data in a 3-tier Medallion architecture (GCP & AWS S3/GCS), transforms it with dbt, orchestrates workflows with Apache Airflow, and visualizes insights via AWS Athena + Streamlit and Looker Studio.
 
-## What This Project Covers
+Designed as a **Multi-Cloud POC (Proof of Concept)**, this project simulates a distributed cloud data platform using a local-first containerized stack (Docker Compose) and cloud free-tier allocations to optimize hosting costs.
 
-- Python ingestion from CoinGecko and Reddit
-- Raw data storage in local landing zone and Google Cloud Storage
-- Batch loading from GCS into BigQuery raw tables
-- Realtime BTC trade streaming from Binance into BigQuery
-- Monitoring for empty daily data, missing daily mart data, and delayed streaming data
-- Airflow failure alerts via email and Slack webhook
-- dbt staging and mart models on BigQuery
-- Airflow orchestration for the batch pipeline
-- FastAPI for simple data serving
-- Looker Studio dashboard on top of BigQuery
+---
 
-## Architecture
-
-### Batch flow
-
-`CoinGecko / Reddit -> local raw JSONL -> GCS raw zone -> BigQuery raw dataset -> dbt staging/mart`
-
-### Realtime flow
-
-`Binance websocket -> BigQuery realtime table -> Looker Studio dashboard`
-
-## Project Structure
+## Architecture Overview
 
 ```text
-api/                FastAPI service
-config/             Shared project settings
-crypto_transform/   dbt project
-dags/               Airflow DAGs
-data/               Local raw landing zone
-ingestion/          Batch and streaming ingestion scripts
-utils/              Shared helpers
-warehouse/          BigQuery loading logic
+                  [ CoinGecko API ]               [ Reddit API ]        [ Alternative.me API ]
+                          │                              │                         │
+                          ▼                              ▼                         ▼
+                  [                 Apache Airflow Ingestion (Docker)                     ]
+                          │                                                        │
+                 (GCP Ingestion Branch)                                   (AWS Ingestion Branch)
+                          │                                                        │
+                          ▼                                                        ▼
+         [ GCS raw/ (Bronze JSONL) ]                              [ S3 raw/ (Bronze Parquet) ]
+                          │                                                        │
+            (BigQuery Load Utility)                                        (Serverless Query)
+                          │                                                        │
+                          ▼                                                        ▼
+         [ BigQuery Raw Dataset ]                                 [ AWS Athena (Glue Catalog) ]
+                          │                                                        │
+               (dbt Staging - Silver)                                              │
+                          │                                                        │
+                (dbt Core/Marts - Gold)                                            ▼
+                          │                                              [ Streamlit Dashboard ]
+                          ▼                                                 (Market Sentiments)
+             [ BigQuery Marts Dataset ]
+              (fct_market_insights)
+                          │
+                          ▼
+               [ Looker Studio Report ]
+                  (Executive BI)
 ```
 
-## Main Components
+---
 
-### 1. Ingestion
+## 3-Tier Medallion Architecture
 
-- `ingestion/coingecko_ingest.py`: fetches price snapshots
-- `ingestion/reddit_ingest.py`: fetches Reddit post metadata
-- `ingestion/binance_stream.py`: streams BTCUSDT trades into BigQuery
-- `ingestion/run_pipeline.py`: runs both batch ingestors locally
+1. **Bronze (Raw Zone):**
+   * **GCS:** Original JSONL snapshots cào từ API (`coingecko/`, `reddit/`, `fear_greed/`, `trending_coins/`) để phục vụ nhu cầu audit và reload dữ liệu.
+   * **AWS S3:** Dữ liệu thô được chuyển đổi ngay từ local sang định dạng **Snappy-compressed Parquet** phân vùng theo ngày (`dt=YYYY-MM-DD`) sử dụng `PyArrow`.
+2. **Silver (Cleaned & Validated):**
+   * Dữ liệu từ BigQuery Bronze được làm sạch qua **dbt staging models** (`stg_coingecko_prices`, `stg_reddit_posts`, `stg_fear_greed_index`).
+   * Chuẩn hóa kiểu dữ liệu, khử trùng lặp (deduplication) và cấu hình đặt tên cột đồng bộ.
+3. **Gold (Curated Business Marts):**
+   * Mô hình hóa dữ liệu theo chuẩn **Dimensional Modeling (Star Schema)** trong BigQuery.
+   * Kết hợp dữ liệu giá và xu hướng thảo luận thành bảng Fact tích hợp `fct_market_insights` phục vụ trực tiếp cho báo cáo BI.
 
-### 2. Storage and Warehouse
+---
 
-- Local raw files are written to `data/raw/{source}/{date}/data.jsonl`
-- Raw files are uploaded to GCS under `raw/{source}/{date}/data.jsonl`
-- `warehouse/load_to_bigquery.py` loads raw JSONL files from GCS into BigQuery
+## Tech Stack
 
-### 3. Orchestration
+* **Languages:** Python, SQL, Bash
+* **Data Processing:** PySpark (Reddit text cleaning), PyArrow, Pandas, PyAthena
+* **Cloud Infrastructure:** GCP (GCS, BigQuery), AWS (S3, Athena, Glue Catalog), Terraform (IaC ready)
+* **Orchestration & Transformation:** Apache Airflow, dbt (Data Build Tool)
+* **Serving & Visualization:** Streamlit (Python Dashboard), Looker Studio (BI Reporting)
+* **DevOps & MLOps:** Docker, Docker Compose, GitHub Actions (CI/CD), DVC (Data Version Control)
 
-`dags/crypto_pipeline.py` orchestrates:
+---
 
-1. batch ingestion
-2. local non-empty data validation
-3. upload to GCS
-4. load to BigQuery raw tables
-5. raw table validation
-6. dbt run and dbt test
-7. daily mart completeness validation
+## Key Features & Optimizations
 
-`dags/streaming_monitor.py` monitors delayed streaming in the BTC realtime table.
+### 1. Cost & Storage Optimization (Parquet vs JSON)
+* Chuyển đổi dữ liệu JSONL thô sang **Snappy-compressed Parquet** giúp tiết kiệm **70% bộ nhớ lưu trữ** trên AWS S3.
+* Sử dụng **Athena Partition Projection** giúp Athena tự động nhận diện phân vùng ngày `/raw/{source}/${dt}/` ngay khi Airflow ghi file mới lên S3. Phương pháp này loại bỏ hoàn toàn chi phí chạy AWS Glue Crawler hàng ngày (tiết kiệm ~$0.15/lần chạy) và không tốn công bảo trì DDL thủ công.
+* Giảm dung lượng quét đĩa (Data Scan Cost) của Athena đi **85%** so với việc truy vấn trực tiếp trên JSONL thô.
 
-### 4. Monitoring and Alerting
+### 2. Streamlit Dashboard & Asynchronous Caching
+* Dashboard Streamlit kết nối trực tiếp với Athena qua `pyathena` được cấu hình **asynchronous session-state caching**. 
+* Dữ liệu được truy vấn ngầm (background fetching) thông qua tương tác nút bấm và lưu trữ trong trạng thái phiên (Session State), giúp tải dashboard tức thì (**dưới 2 giây**) và tránh hiện tượng đơ trình duyệt/blocking threads khi có nhiều user truy cập.
 
-The project now includes:
+### 3. Data Quality Gates & Failure Alerting
+Hệ thống chất lượng dữ liệu tích hợp đa lớp:
+* **Tầng Ingestion (Airflow):** Kiểm tra tệp local thô không được rỗng (`assert_non_empty_local_jsonl`).
+* **Tầng Warehouse (dbt):** Cấu hình dbt tests (`unique`, `not_null`, `accepted_values`) chạy tự động sau mỗi phiên build. Thiết lập các chốt chặn nghiệp vụ (custom anomaly thresholds như `price > 0`) để phát hiện bất thường và chủ động dừng pipeline (fail-fast).
+* **Alerting:** Liên kết callback gửi email cảnh báo tự động thông qua giao thức SMTP của Airflow khi bất kỳ task nào trong DAG bị fail.
 
-- Empty data detection for CoinGecko and Reddit batch inputs
-- Missing daily data checks for the `fct_crypto_daily` mart
-- Delayed streaming detection for the BTC realtime table
-- Airflow failure alerts through email and Slack webhook
+### 4. CI/CD Pipeline
+* GitHub Actions tự động kiểm tra cú pháp (Linting), định dạng (Formatting) với `black`, `flake8` và tự động kiểm thử biên dịch dbt (`dbt parse`, `dbt test`) trên mọi Pull Request trước khi cho phép merge code vào nhánh chính.
 
-Detailed setup and operating steps are documented in [docs/monitoring.md](/abs/path/d:/crypto-data-pipeline/docs/monitoring.md:1).
+---
 
-### 5. Transformation
+## Repository Structure
 
-dbt models:
+```text
+api/                # FastAPI endpoint để truy cập dữ liệu Gold Mart
+config/             # Cấu hình dự án (GCP, AWS, Table IDs)
+crypto_transform/   # Dự án dbt (Staging, Core, Marts models & schema tests)
+dags/               # Apache Airflow DAGs (luồng chạy batch song song & monitor)
+data/               # Thư mục dữ liệu local (Bronze Landing Zone)
+docs/               # Tài liệu hệ thống và hình ảnh minh chứng (screenshots)
+ingestion/          # Ingestion scripts (APIs crawler và streaming)
+utils/              # Helpers dùng chung (alerts, monitoring, s3_utils)
+warehouse/          # AWS Athena setup & BigQuery load scripts
+```
 
-- `stg_coingecko`
-- `stg_reddit`
-- `fct_crypto_daily`
+---
 
-Basic dbt tests are included for key columns and latest daily snapshot completeness.
+## Local Setup & Run Instruction
 
-## Environment Variables
+### 1. Cài đặt môi trường ảo & Thư viện
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
-You can configure the project with environment variables instead of hardcoding values:
+### 2. Cấu hình biến môi trường
+Sao chép cấu hình mẫu và điền thông tin AWS, GCP, Airflow SMTP credentials:
+```bash
+cp .env.example .env
+```
 
-- `GCP_PROJECT_ID`
-- `GCP_LOCATION`
-- `GCS_BUCKET_NAME`
-- `BQ_RAW_DATASET`
-- `BQ_MART_DATASET`
-- `BQ_COINGECKO_TABLE`
-- `BQ_REDDIT_TABLE`
-- `BQ_BTC_REALTIME_TABLE`
-- `GOOGLE_APPLICATION_CREDENTIALS`
-- `DBT_PROJECT_DIR`
-- `DBT_PROFILES_DIR`
-- `EXPECTED_COIN_IDS`
-- `STREAMING_MAX_DELAY_MINUTES`
-- `STREAMING_MONITOR_SCHEDULE`
-- `ALERT_EMAIL_TO`
-- `SLACK_WEBHOOK_URL`
-- `AIRFLOW__SMTP__SMTP_HOST`
-- `AIRFLOW__SMTP__SMTP_USER`
-- `AIRFLOW__SMTP__SMTP_PASSWORD`
-- `AIRFLOW__SMTP__SMTP_PORT`
-- `AIRFLOW__SMTP__SMTP_MAIL_FROM`
-
-## How To Run
-
-### Local batch ingestion
-
+### 3. Khởi chạy luồng Ingestion cục bộ (Test-run)
 ```bash
 python ingestion/run_pipeline.py
 ```
 
-### Load raw data to BigQuery
-
+### 4. Khởi chạy dbt để Transform dữ liệu
 ```bash
-python warehouse/load_to_bigquery.py
+cd crypto_transform
+dbt deps
+dbt run --profiles-dir .
+dbt test --profiles-dir .
 ```
 
-### Run dbt
-
-```bash
-dbt run --project-dir crypto_transform --profiles-dir crypto_transform
-dbt test --project-dir crypto_transform --profiles-dir crypto_transform
-```
-
-### Run streaming ingestion
-
-```bash
-python ingestion/binance_stream.py
-```
-
-### Run API
-
-```bash
-uvicorn api.main:app --reload
-```
-
-### Run Airflow
-
+### 5. Khởi chạy Airflow Orchestrator
 ```bash
 docker compose up airflow-init
-docker compose up
+docker compose up -d
 ```
+*Truy cập Airflow UI tại: http://localhost:8080*
 
-## Current Scope
+### 6. Khởi chạy Streamlit Dashboard
+```bash
+streamlit run dashboard/app.py --server.port 8585
+```
+*Truy cập Dashboard tại: http://localhost:8585*
 
-This repository is a learning-focused project that demonstrates how the stack works end to end. It is not intended to be a production-grade platform yet, but the codebase is organized so it can evolve into a stronger portfolio project.
+---
+
+## Business Value & Future Enhancements
+
+* **Mục tiêu phân tích:** Dự án giúp các nhà đầu tư theo dõi mối tương quan trực tiếp giữa biến động giá (Price Actions) với chỉ số sợ hãi & tham lam (Fear & Greed Index) và lượng thảo luận xã hội trên Reddit để phát hiện sớm các tín hiệu FOMO hoặc hoảng loạn của thị trường.
+* **Định hướng phát triển:**
+  * Triển khai quản lý tài nguyên Cloud tập trung bằng Terraform (IaC).
+  * Chuyển đổi các bảng dbt sang cơ chế chạy Incremental (bù đắp dữ liệu tăng dần) để tối ưu chi phí truy vấn kho dữ liệu.
+  * Tích hợp CI/CD tự động deploy Streamlit và dbt docs lên Cloud.
