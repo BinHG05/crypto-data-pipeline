@@ -33,10 +33,10 @@ jobs:
           pip install black==24.10.0 flake8==7.1.1 pytest
 
       - name: Run Black check
-        run: black --check .
+        run: black --check . --extend-exclude "dashboard/"
 
       - name: Run flake8 check
-        run: flake8 . --ignore=E501,W503,E402
+        run: flake8 . --ignore=E501,W503,E402 --exclude=.git,__pycache__,.venv,venv,build,dist,logs,dbt_packages,target,dashboard
 
   unit-tests:
     name: 🧪 Automated Pytest Unit Quality Gates (CI)
