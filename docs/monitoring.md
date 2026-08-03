@@ -1,84 +1,68 @@
-# Monitoring and Alerting Guide
+# 🛡️ Monitoring, Quality Control & Alerting SOP
 
-## What Is Implemented
+This document describes the multi-layered monitoring, data contract validation, and real-time failure alerting architecture for the **Crypto Data Pipeline**.
 
-### 1. Empty Data Detection
+---
 
-The batch DAG now fails early when a source produces no usable records.
+## 🔍 Multi-Layered Quality Controls
 
-- `ingestion/coingecko_ingest.py` raises an error if CoinGecko returns an empty dataset.
-- `ingestion/reddit_ingest.py` raises an error if Reddit returns an empty dataset.
-- `dags/crypto_pipeline.py` runs `validate_coingecko_local_data` and `validate_reddit_local_data` to ensure the generated JSONL files exist and contain at least one record before uploading to GCS.
-- `warehouse/load_to_bigquery.py` raises an error if a BigQuery load job reports zero loaded rows.
+### 1. Ingestion Data Contract Validation (Pydantic Schema Drift Guard)
+* **Location**: `utils/schema_validator.py`
+* **Behavior**: Intercepts raw API responses before landing in raw storage (`data/raw/`).
+* **Models**: `CoinGeckoRecord`, `RedditRecord`, `FearGreedRecord`, `TrendingCoinRecord`.
+* **Quarantine Pattern**: Corrupted fields are isolated and logged without corrupting raw data stores.
 
-### 2. Missing Daily Data Check
+### 2. Enterprise Data Warehouse Quality Suite (56 dbt Tests)
+* **Location**: `crypto_transform/models/schema.yml`
+* **Behavior**: Runs 56 automated tests on every `dbt test` run.
+* **Test Types**:
+  * `unique` & `not_null` primary key constraints.
+  * `relationships` referential integrity checks between Fact & Dimension tables.
+  * `dbt_utils.accepted_range` metrics validation (`fng_value` 0-100, `avg_price` > 0).
 
-The batch DAG validates that the daily mart contains the expected coin rows after dbt finishes.
+---
 
-- `utils/monitoring.py` checks `fct_crypto_daily` for the current UTC batch date.
-- The expected coin list comes from `EXPECTED_COIN_IDS`.
-- `crypto_transform/tests/test_fct_crypto_daily_latest_snapshot_not_missing.sql` adds a dbt test that verifies the latest snapshot contains every expected coin.
+## 📱 Real-Time Telegram Incident Alerting
 
-### 3. Delayed Streaming Detection
+When any Airflow task encounters a failure (API timeout, network glitch, database error), Airflow's `on_failure_callback` fires `send_failure_alert()` from `utils/alerts.py`.
 
-A dedicated Airflow DAG monitors the realtime table.
+### Telegram Notification Schema:
+```text
+🚨 Airflow Pipeline Task Failure Alert 🚨
 
-- `dags/streaming_monitor.py` runs on `STREAMING_MONITOR_SCHEDULE`.
-- `utils/monitoring.py` checks the latest `event_time` in `btc_realtime`.
-- The check fails if:
-  - the table is empty
-  - there are no recent rows inside the configured window
-  - the latest event is older than `STREAMING_MAX_DELAY_MINUTES`
+DAG: crypto_pipeline_v2
+Task: fetch_coingecko
+Run ID: scheduled__2026-08-03T00:00:00+00:00
+Execution Time: 2026-08-03 00:00:00 UTC
 
-## Alerting
+Exception Traceback:
+requests.exceptions.HTTPError: 503 Server Error: Service Unavailable
 
-Alerts are triggered through a shared Airflow failure callback in `utils/alerts.py`.
-
-- Email alerts are sent when `ALERT_EMAIL_TO` is set and Airflow SMTP settings are configured.
-- Slack alerts are sent when `SLACK_WEBHOOK_URL` is set.
-- Both batch and streaming monitor DAGs use the same failure callback.
-
-## Required Environment Variables
-
-Add these values to your `.env`:
-
-```env
-EXPECTED_COIN_IDS=bitcoin,ethereum
-STREAMING_MAX_DELAY_MINUTES=10
-STREAMING_MONITOR_SCHEDULE=*/5 * * * *
-ALERT_EMAIL_TO=you@example.com
-SLACK_WEBHOOK_URL=
-AIRFLOW__SMTP__SMTP_HOST=smtp.gmail.com
-AIRFLOW__SMTP__SMTP_STARTTLS=True
-AIRFLOW__SMTP__SMTP_SSL=False
-AIRFLOW__SMTP__SMTP_USER=your_email@example.com
-AIRFLOW__SMTP__SMTP_PASSWORD=your_app_password
-AIRFLOW__SMTP__SMTP_PORT=587
-AIRFLOW__SMTP__SMTP_MAIL_FROM=your_email@example.com
+🔗 Airflow Log URL:
+http://localhost:8080/log?dag_id=crypto_pipeline_v2&task_id=fetch_coingecko
 ```
 
-## How the DAGs Behave
+### Environment Settings Required (`.env`):
+```env
+TELEGRAM_BOT_TOKEN=8751695260:AAEsJ4HC5vqbmhJocl-3dkDIkj2d39eNQyM
+TELEGRAM_CHAT_ID=6189997335
+```
 
-### Batch DAG
+---
 
-`crypto_pipeline_v2` now runs in this order:
+## 🧪 Operational Diagnostics Commands
 
-1. Fetch CoinGecko and Reddit data
-2. Validate local JSONL files are not empty
-3. Upload raw files to GCS
-4. Load raw files into BigQuery
-5. Validate raw tables contain rows
-6. Run `dbt run`
-7. Run `dbt test`
-8. Validate `fct_crypto_daily` for the expected daily coin coverage
+### Manual Test Telegram Alert Dispatch:
+```bash
+docker compose exec -e PYTHONPATH=/opt/airflow airflow-scheduler python /opt/airflow/utils/test_telegram.py
+```
 
-### Streaming Monitor DAG
+### Run Pytest Suite for Data Contracts & Alerts:
+```bash
+docker compose exec -e PYTHONPATH=/opt/airflow airflow-scheduler python -m unittest discover -s /opt/airflow/tests
+```
 
-`btc_streaming_monitor_v1` runs independently from the batch DAG and only checks the freshness of realtime streaming data.
-
-## Recommended Next Steps
-
-1. Fill in `.env` with real SMTP credentials and, optionally, a Slack webhook URL.
-2. Restart Airflow so the new environment variables and DAGs are loaded.
-3. Trigger `crypto_pipeline_v2` manually once to confirm the new validation tasks pass.
-4. Trigger `btc_streaming_monitor_v1` to confirm streaming freshness monitoring works against your realtime table.
+### Run dbt Quality Test Suite:
+```bash
+docker compose exec airflow-scheduler bash -c "cd /opt/airflow/crypto_transform && dbt test"
+```
