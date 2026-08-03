@@ -1,10 +1,10 @@
 import os
-import sys
 from pathlib import Path
+
 import pandas as pd
-import streamlit as st
-import plotly.graph_objects as go
 import plotly.express as px
+import plotly.graph_objects as go
+import streamlit as st
 
 # Page setup for premium aesthetic
 st.set_page_config(
@@ -24,14 +24,14 @@ st.markdown(
         color: #c9d1d9;
         font-family: 'Outfit', sans-serif;
     }
-    
+
     /* Headers styling */
     h1, h2, h3 {
         color: #ffffff !important;
         font-weight: 700;
         letter-spacing: -0.5px;
     }
-    
+
     /* Top metric cards (Glassmorphic) */
     .metric-card {
         background: rgba(22, 27, 34, 0.7);
@@ -60,7 +60,7 @@ st.markdown(
         font-weight: 600;
         margin-top: 5px;
     }
-    
+
     /* Panel for welcome prompt */
     .welcome-panel {
         background: rgba(22, 27, 34, 0.9);
@@ -72,12 +72,12 @@ st.markdown(
         margin: 50px auto;
         box-shadow: 0 8px 30px rgba(0,0,0,0.5);
     }
-    
+
     /* Glowing accents */
     .glow-green { color: #39d353 !important; }
     .glow-yellow { color: #f9e2af !important; }
     .glow-red { color: #f85149 !important; }
-    
+
     /* Sidebar styling */
     section[data-testid="stSidebar"] {
         background-color: #161b22 !important;
@@ -117,7 +117,6 @@ ATHENA_S3_STAGING = f"s3://{AWS_S3_BUCKET_NAME}/athena_results/"
 @st.cache_resource
 def get_athena_connection():
     """Creates a thread-safe connection to AWS Athena."""
-    # Defer import to prevent threading compile lockups during server startup
     from pyathena import connect
 
     try:
@@ -212,7 +211,7 @@ if not AWS_ACCESS_KEY_ID or not AWS_SECRET_ACCESS_KEY:
 # ==========================================
 if not st.session_state.data_loaded:
     st.markdown(
-        f"""
+        """
         <div class="welcome-panel">
             <h2>🔌 Ready to Connect</h2>
             <p style="color: #8b949e; margin-top: 10px; font-size: 15px;">
@@ -230,17 +229,19 @@ if not st.session_state.data_loaded:
         ):
             with st.spinner("Executing serverless queries on AWS Athena..."):
                 # 1. Fetch historical Fear & Greed (covers current too)
-                st.session_state.fg_history_df = run_query("""
-                    SELECT CAST(value AS INT) as value, value_classification, dt 
-                    FROM crypto_athena.fear_greed_index 
-                    ORDER BY dt DESC 
+                st.session_state.fg_history_df = run_query(
+                    """
+                    SELECT CAST(value AS INT) as value, value_classification, dt
+                    FROM crypto_athena.fear_greed_index
+                    ORDER BY dt DESC
                     LIMIT 30
-                """)
+                """
+                )
 
                 # 2. Fetch latest prices for summary metrics
-                # Note: CoinGecko API stores full names (bitcoin, ethereum), map to short symbols
-                st.session_state.prices_df = run_query("""
-                    SELECT 
+                st.session_state.prices_df = run_query(
+                    """
+                    SELECT
                         CASE LOWER(symbol)
                             WHEN 'bitcoin' THEN 'btc'
                             WHEN 'ethereum' THEN 'eth'
@@ -250,10 +251,12 @@ if not st.session_state.data_loaded:
                         price, timestamp, dt
                     FROM crypto_athena.coingecko_prices
                     ORDER BY dt DESC, timestamp DESC
-                """)
+                """
+                )
 
                 # 3. Fetch Reddit mentions aggregated by day for BTC, ETH, SOL
-                st.session_state.reddit_mentions_df = run_query("""
+                st.session_state.reddit_mentions_df = run_query(
+                    """
                     SELECT
                         dt AS report_date,
                         COUNT(CASE WHEN LOWER(title) LIKE '%btc%' OR LOWER(title) LIKE '%bitcoin%' THEN 1 END) AS btc_mentions,
@@ -262,7 +265,8 @@ if not st.session_state.data_loaded:
                     FROM crypto_athena.reddit_posts
                     GROUP BY dt
                     ORDER BY dt ASC
-                """)
+                """
+                )
 
                 st.session_state.data_loaded = True
                 st.rerun()
@@ -377,7 +381,6 @@ else:
     with col1:
         st.subheader(f"📈 Fear & Greed Index Trend (Last {days_to_show} Days)")
         if not fg_history_df.empty:
-            # Filter by days_to_show
             fg_history_plot = (
                 fg_history_df.head(days_to_show).iloc[::-1].reset_index(drop=True)
             )
@@ -414,7 +417,10 @@ else:
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
                 xaxis=dict(
-                    showgrid=True, gridcolor="#21262d", title="Date", color="#c9d1d9"
+                    showgrid=True,
+                    gridcolor="#21262d",
+                    title="Date",
+                    color="#c9d1d9",
                 ),
                 yaxis=dict(
                     showgrid=True,
@@ -524,7 +530,6 @@ else:
         correlation_df = correlation_df.sort_values("report_date").reset_index(
             drop=True
         )
-        # Filter to only show last N days
         correlation_df = correlation_df.tail(days_to_show)
 
         if not correlation_df.empty:
@@ -555,7 +560,10 @@ else:
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
                 xaxis=dict(
-                    showgrid=True, gridcolor="#21262d", title="Date", color="#c9d1d9"
+                    showgrid=True,
+                    gridcolor="#21262d",
+                    title="Date",
+                    color="#c9d1d9",
                 ),
                 yaxis1=dict(
                     title=dict(

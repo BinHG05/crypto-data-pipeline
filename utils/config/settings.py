@@ -2,9 +2,9 @@ import importlib.util
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-API_CONFIG_PATH = PROJECT_ROOT / "config" / "api_config.py"
+SETTINGS_PATH = PROJECT_ROOT / "config" / "settings.py"
 
-spec = importlib.util.spec_from_file_location("real_api_config", str(API_CONFIG_PATH))
+spec = importlib.util.spec_from_file_location("real_settings", str(SETTINGS_PATH))
 _mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(_mod)
 

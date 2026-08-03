@@ -14,6 +14,7 @@ import requests
 
 from config.api_config import FEAR_GREED_API
 from utils.file_utils import save_json
+from utils.schema_validator import FearGreedRecord, validate_records
 
 
 def transform_fear_greed(data):
@@ -68,7 +69,10 @@ def fetch_fear_greed():
         logger.error("Fear & Greed returned empty dataset")
         raise ValueError("Fear & Greed returned empty dataset")
 
-    save_json(result, "fear_greed")
+    # Schema Drift Guard: Pydantic Validation Gate
+    validated_result = validate_records(result, FearGreedRecord, "FearGreed")
+
+    save_json(validated_result, "fear_greed")
     logger.info("Saved Fear & Greed raw data successfully")
 
 

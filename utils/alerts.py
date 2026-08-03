@@ -3,7 +3,12 @@ from typing import Any
 
 import requests
 
-from config.settings import ALERT_EMAIL_TO, SLACK_WEBHOOK_URL
+from config.settings import (
+    ALERT_EMAIL_TO,
+    SLACK_WEBHOOK_URL,
+    TELEGRAM_BOT_TOKEN,
+    TELEGRAM_CHAT_ID,
+)
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -21,13 +26,36 @@ def _build_alert_message(context: dict[str, Any]) -> str:
     log_url = getattr(task_instance, "log_url", "")
 
     return (
-        f"Airflow alert\n"
-        f"DAG: {dag_id}\n"
-        f"Task: {task_id}\n"
-        f"Run ID: {run_id}\n"
-        f"Exception: {exception}\n"
-        f"Log URL: {log_url}"
+        f"🚨 <b>Airflow Task Failure Alert</b>\n\n"
+        f"<b>DAG:</b> <code>{dag_id}</code>\n"
+        f"<b>Task:</b> <code>{task_id}</code>\n"
+        f"<b>Run ID:</b> <code>{run_id}</code>\n"
+        f"<b>Exception:</b> <i>{exception}</i>\n"
+        f"<b>Log URL:</b> {log_url}"
     )
+
+
+def _send_telegram_alert(body: str) -> None:
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        logger.info(
+            "Telegram alert skipped because TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID is not configured"
+        )
+        return
+
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": TELEGRAM_CHAT_ID,
+        "text": body,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": True,
+    }
+
+    try:
+        response = requests.post(url, json=payload, timeout=15)
+        response.raise_for_status()
+        logger.info("Sent Telegram alert successfully")
+    except requests.RequestException as exc:
+        logger.error(f"Failed to send Telegram alert | error={exc}")
 
 
 def _send_email_alert(subject: str, body: str) -> None:
@@ -70,14 +98,15 @@ def _send_slack_alert(body: str) -> None:
 
 
 def send_failure_alert(context: dict[str, Any]) -> None:
-    task_instance = context["task_instance"]
-    message = _build_alert_message(context)
-    subject = f"[Airflow] Failure in {task_instance.dag_id}.{task_instance.task_id}"
+    task_instance = context.get("task_instance")
+    dag_id = getattr(task_instance, "dag_id", "unknown")
+    task_id = getattr(task_instance, "task_id", "unknown")
 
-    logger.warning(
-        "Dispatching failure alert | "
-        f"dag={task_instance.dag_id} | task={task_instance.task_id}"
-    )
+    message = _build_alert_message(context)
+    subject = f"[Airflow] Failure in {dag_id}.{task_id}"
+
+    logger.warning(f"Dispatching failure alert | dag={dag_id} | task={task_id}")
 
     _send_email_alert(subject, message)
     _send_slack_alert(message)
+    _send_telegram_alert(message)

@@ -15,6 +15,7 @@ import requests
 
 from config.api_config import COINGECKO_API
 from utils.file_utils import save_json
+from utils.schema_validator import CoinGeckoRecord, validate_records
 
 
 def transform_coingecko(data):
@@ -35,7 +36,6 @@ def transform_coingecko(data):
 
 
 def fetch_coingecko():
-
     logger.info("Starting CoinGecko ingestion")
 
     session = requests.Session()
@@ -69,7 +69,10 @@ def fetch_coingecko():
         logger.error("CoinGecko returned empty dataset")
         raise ValueError("CoinGecko returned empty dataset")
 
-    save_json(result, "coingecko")
+    # Schema Drift Guard: Pydantic Validation Gate
+    validated_result = validate_records(result, CoinGeckoRecord, "CoinGecko")
+
+    save_json(validated_result, "coingecko")
 
     logger.info("Saved CoinGecko raw data successfully")
 

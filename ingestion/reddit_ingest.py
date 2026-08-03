@@ -14,6 +14,7 @@ import requests
 
 from config.api_config import REDDIT_API
 from utils.file_utils import save_json
+from utils.schema_validator import RedditRecord, validate_records
 
 
 def _build_fallback_reddit_data() -> dict:
@@ -118,7 +119,10 @@ def fetch_reddit():
         logger.error("Reddit API returned empty dataset")
         raise ValueError("Reddit API returned empty dataset")
 
-    save_json(posts, "reddit")
+    # Schema Drift Guard: Pydantic Validation Gate
+    validated_posts = validate_records(posts, RedditRecord, "Reddit")
+
+    save_json(validated_posts, "reddit")
 
     logger.info("Saved Reddit raw data successfully")
 
