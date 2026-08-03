@@ -6,15 +6,15 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-# Page setup for premium aesthetic
+# Page setup for premium production aesthetic
 st.set_page_config(
-    page_title="Crypto Market Insights & Sentiment Hub",
-    page_icon="📊",
+    page_title="Crypto Market Insights & Intelligence Portal",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# Custom CSS for dark glassmorphism UI theme
+# Custom CSS for modern dark glassmorphism UI theme
 st.markdown(
     """
 <style>
@@ -22,7 +22,7 @@ st.markdown(
     .stApp {
         background-color: #0d1117;
         color: #c9d1d9;
-        font-family: 'Outfit', sans-serif;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
     /* Headers styling */
@@ -32,51 +32,46 @@ st.markdown(
         letter-spacing: -0.5px;
     }
 
-    /* Top metric cards (Glassmorphic) */
+    /* Professional Top metric cards */
     .metric-card {
-        background: rgba(22, 27, 34, 0.7);
+        background: linear-gradient(135deg, rgba(22, 27, 34, 0.9) 0%, rgba(13, 17, 23, 0.9) 100%);
         border: 1px solid rgba(48, 54, 61, 0.8);
-        border-radius: 12px;
-        padding: 24px;
+        border-radius: 14px;
+        padding: 20px;
         text-align: center;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        margin-bottom: 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .metric-card:hover {
+        border-color: #58a6ff;
+        transform: translateY(-2px);
     }
     .metric-title {
-        font-size: 14px;
+        font-size: 13px;
         text-transform: uppercase;
         color: #8b949e;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
         font-weight: 600;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.8px;
     }
     .metric-value {
-        font-size: 36px;
+        font-size: 32px;
         font-weight: 800;
-        color: #58a6ff;
+        color: #ffffff;
     }
-    .metric-label {
-        font-size: 16px;
+    .metric-sub {
+        font-size: 13px;
         font-weight: 600;
-        margin-top: 5px;
-    }
-
-    /* Panel for welcome prompt */
-    .welcome-panel {
-        background: rgba(22, 27, 34, 0.9);
-        border: 1px solid #30363d;
+        margin-top: 6px;
+        display: inline-block;
+        padding: 2px 10px;
         border-radius: 12px;
-        padding: 40px;
-        text-align: center;
-        max-width: 700px;
-        margin: 50px auto;
-        box-shadow: 0 8px 30px rgba(0,0,0,0.5);
     }
 
-    /* Glowing accents */
-    .glow-green { color: #39d353 !important; }
-    .glow-yellow { color: #f9e2af !important; }
-    .glow-red { color: #f85149 !important; }
+    /* Status badge colors */
+    .badge-green { background: rgba(57, 211, 83, 0.15); color: #39d353; border: 1px solid rgba(57, 211, 83, 0.3); }
+    .badge-yellow { background: rgba(249, 226, 175, 0.15); color: #f9e2af; border: 1px solid rgba(249, 226, 175, 0.3); }
+    .badge-red { background: rgba(248, 81, 73, 0.15); color: #f85149; border: 1px solid rgba(248, 81, 73, 0.3); }
 
     /* Sidebar styling */
     section[data-testid="stSidebar"] {
@@ -128,7 +123,7 @@ def get_athena_connection():
             schema_name="crypto_athena",
         )
     except Exception as e:
-        st.error(f"Failed to connect to AWS Athena: {e}")
+        st.error(f"Athena Connection Error: {e}")
         return None
 
 
@@ -144,403 +139,333 @@ def run_query(query: str) -> pd.DataFrame:
         return pd.DataFrame()
 
 
+# Coin symbols mapping dictionary
+COIN_NAME_MAP = {
+    "bitcoin": "BTC",
+    "ethereum": "ETH",
+    "solana": "SOL",
+    "cardano": "ADA",
+    "ripple": "XRP",
+    "polkadot": "DOT",
+    "avalanche-2": "AVAX",
+    "dogecoin": "DOGE",
+}
+
+ALL_COINS = ["BTC", "ETH", "SOL", "ADA", "XRP", "DOT", "AVAX", "DOGE"]
+
 # ==========================================
 # INITIALIZE STATE
 # ==========================================
-if "data_loaded" not in st.session_state:
-    st.session_state.data_loaded = False
+if "fg_history_df" not in st.session_state:
     st.session_state.fg_history_df = pd.DataFrame()
+if "prices_df" not in st.session_state:
     st.session_state.prices_df = pd.DataFrame()
+if "reddit_mentions_df" not in st.session_state:
     st.session_state.reddit_mentions_df = pd.DataFrame()
+if "initial_fetch_done" not in st.session_state:
+    st.session_state.initial_fetch_done = False
+
+
+def fetch_all_dashboard_data():
+    """Fetches all market datasets from AWS Athena Data Lake."""
+    st.session_state.fg_history_df = run_query(
+        """
+        SELECT CAST(value AS INT) as value, value_classification, dt
+        FROM crypto_athena.fear_greed_index
+        ORDER BY dt DESC
+        LIMIT 90
+    """
+    )
+
+    st.session_state.prices_df = run_query(
+        """
+        SELECT 
+            CASE LOWER(symbol)
+                WHEN 'bitcoin' THEN 'BTC'
+                WHEN 'ethereum' THEN 'ETH'
+                WHEN 'solana' THEN 'SOL'
+                WHEN 'cardano' THEN 'ADA'
+                WHEN 'ripple' THEN 'XRP'
+                WHEN 'polkadot' THEN 'DOT'
+                WHEN 'avalanche-2' THEN 'AVAX'
+                WHEN 'dogecoin' THEN 'DOGE'
+                ELSE UPPER(symbol)
+            END AS symbol,
+            price, timestamp, dt
+        FROM crypto_athena.coingecko_prices
+        ORDER BY dt DESC, timestamp DESC
+    """
+    )
+
+    st.session_state.reddit_mentions_df = run_query(
+        """
+        SELECT
+            dt AS report_date,
+            COUNT(CASE WHEN LOWER(title) LIKE '%btc%' OR LOWER(title) LIKE '%bitcoin%' THEN 1 END) AS btc_mentions,
+            COUNT(CASE WHEN LOWER(title) LIKE '%eth%' OR LOWER(title) LIKE '%ethereum%' THEN 1 END) AS eth_mentions,
+            COUNT(CASE WHEN LOWER(title) LIKE '%sol%' OR LOWER(title) LIKE '%solana%' THEN 1 END) AS sol_mentions,
+            COUNT(CASE WHEN LOWER(title) LIKE '%ada%' OR LOWER(title) LIKE '%cardano%' THEN 1 END) AS ada_mentions,
+            COUNT(CASE WHEN LOWER(title) LIKE '%xrp%' OR LOWER(title) LIKE '%ripple%' THEN 1 END) AS xrp_mentions,
+            COUNT(CASE WHEN LOWER(title) LIKE '%dot%' OR LOWER(title) LIKE '%polkadot%' THEN 1 END) AS dot_mentions,
+            COUNT(CASE WHEN LOWER(title) LIKE '%avax%' OR LOWER(title) LIKE '%avalanche%' THEN 1 END) AS avax_mentions,
+            COUNT(CASE WHEN LOWER(title) LIKE '%doge%' OR LOWER(title) LIKE '%dogecoin%' THEN 1 END) AS doge_mentions
+        FROM crypto_athena.reddit_posts
+        GROUP BY dt
+        ORDER BY dt ASC
+    """
+    )
+    st.session_state.initial_fetch_done = True
+
+
+# Auto-fetch data on first load if credentials present
+if not st.session_state.initial_fetch_done and AWS_ACCESS_KEY_ID:
+    fetch_all_dashboard_data()
 
 # ==========================================
-# SIDEBAR - Config & Status
+# SIDEBAR - Controls & Filters
 # ==========================================
 with st.sidebar:
-    st.image("https://cryptologos.cc/logos/bitcoin-btc-logo.png", width=60)
-    st.title("Settings")
+    st.image("https://cryptologos.cc/logos/bitcoin-btc-logo.png", width=50)
+    st.title("Market Filters")
     st.markdown("---")
 
-    st.markdown("### Connection Status")
-    if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY and AWS_S3_BUCKET_NAME:
-        st.success("Credentials Loaded Successfully")
-    else:
-        st.warning("AWS Credentials Missing in .env")
+    days_to_show = st.selectbox(
+        "Timeline Range",
+        options=[7, 15, 30, 60, 90],
+        index=2,
+        format_func=lambda x: f"Last {x} Days",
+    )
 
-    st.info(f"**Athena Database:** `crypto_athena`\n\n**Region:** `{AWS_REGION}`")
+    selected_coins = st.multiselect(
+        "Watchlist Tokens",
+        options=ALL_COINS,
+        default=["BTC", "ETH", "SOL", "ADA", "XRP"],
+    )
 
     st.markdown("---")
-    st.markdown("### Controls")
-    if st.session_state.data_loaded:
-        days_to_show = st.selectbox(
-            "Select Timeline",
-            options=[7, 15, 30],
-            index=2,
-            format_func=lambda x: f"Last {x} Days",
-        )
-        selected_coins = st.multiselect(
-            "Coins to Analyze",
-            options=["BTC", "ETH", "SOL"],
-            default=["BTC", "ETH", "SOL"],
-        )
-        st.markdown("---")
-        if st.button("🔄 Refresh Data"):
-            st.session_state.data_loaded = False
+    if st.button("🔄 Sync Latest Market Data", use_container_width=True):
+        with st.spinner("Syncing latest Data Lake partitions..."):
+            fetch_all_dashboard_data()
             st.rerun()
-    else:
-        st.info("Load data to enable controls")
 
 # ==========================================
 # HEADER SECTION
 # ==========================================
-st.markdown("# 📊 Crypto Market Insights & Sentiment Hub")
+st.markdown("# ⚡ Crypto Market Intelligence & Sentiment Portal")
 st.markdown(
-    "Analyzing real-time correlation between token price actions and Reddit social sentiments via **AWS S3, Athena, and Streamlit**."
+    "Real-time market analytics, sentiment indicators, and social volume correlation powered by **Data Lake & AWS Athena Serverless Engine**."
 )
 st.markdown("---")
 
-# Verify connection
-if not AWS_ACCESS_KEY_ID or not AWS_SECRET_ACCESS_KEY:
-    st.info(
-        "Please fill in your AWS credentials in your project's `.env` file to start querying."
-    )
-    st.stop()
+# Read dataframes from Session State
+fg_history_df = st.session_state.fg_history_df
+prices_df = st.session_state.prices_df
+reddit_mentions_df = st.session_state.reddit_mentions_df
 
 # ==========================================
-# CONNECT & LOAD SCREEN (NON-BLOCKING)
+# SUMMARY METRIC CARDS (CLEAN & PROFESSIONAL)
 # ==========================================
-if not st.session_state.data_loaded:
-    st.markdown(
-        """
-        <div class="welcome-panel">
-            <h2>🔌 Ready to Connect</h2>
-            <p style="color: #8b949e; margin-top: 10px; font-size: 15px;">
-                AWS credentials and S3 schemas are configured. Click the button below to trigger AWS Athena serverless queries on your S3 Parquet data warehouse.
-            </p>
-        </div>
-    """,
-        unsafe_allow_html=True,
-    )
+kpi_cols = st.columns(4)
 
-    col_c1, col_c2, col_c3 = st.columns([1, 2, 1])
-    with col_c2:
-        if st.button(
-            "📊 Connect & Fetch Latest Market Insights", use_container_width=True
-        ):
-            with st.spinner("Executing serverless queries on AWS Athena..."):
-                # 1. Fetch historical Fear & Greed (covers current too)
-                st.session_state.fg_history_df = run_query(
-                    """
-                    SELECT CAST(value AS INT) as value, value_classification, dt
-                    FROM crypto_athena.fear_greed_index
-                    ORDER BY dt DESC
-                    LIMIT 30
-                """
-                )
+# 1. Market Sentiment Score (Fear & Greed)
+with kpi_cols[0]:
+    if not fg_history_df.empty:
+        fg_val = int(fg_history_df["value"].iloc[0])
+        fg_class = fg_history_df["value_classification"].iloc[0]
 
-                # 2. Fetch latest prices for summary metrics
-                st.session_state.prices_df = run_query(
-                    """
-                    SELECT
-                        CASE LOWER(symbol)
-                            WHEN 'bitcoin' THEN 'btc'
-                            WHEN 'ethereum' THEN 'eth'
-                            WHEN 'solana' THEN 'sol'
-                            ELSE LOWER(symbol)
-                        END AS symbol,
-                        price, timestamp, dt
-                    FROM crypto_athena.coingecko_prices
-                    ORDER BY dt DESC, timestamp DESC
-                """
-                )
+        badge_style = "badge-yellow"
+        if fg_val < 35:
+            badge_style = "badge-red"
+        elif fg_val > 65:
+            badge_style = "badge-green"
 
-                # 3. Fetch Reddit mentions aggregated by day for BTC, ETH, SOL
-                st.session_state.reddit_mentions_df = run_query(
-                    """
-                    SELECT
-                        dt AS report_date,
-                        COUNT(CASE WHEN LOWER(title) LIKE '%btc%' OR LOWER(title) LIKE '%bitcoin%' THEN 1 END) AS btc_mentions,
-                        COUNT(CASE WHEN LOWER(title) LIKE '%eth%' OR LOWER(title) LIKE '%ethereum%' THEN 1 END) AS eth_mentions,
-                        COUNT(CASE WHEN LOWER(title) LIKE '%sol%' OR LOWER(title) LIKE '%solana%' THEN 1 END) AS sol_mentions
-                    FROM crypto_athena.reddit_posts
-                    GROUP BY dt
-                    ORDER BY dt ASC
-                """
-                )
-
-                st.session_state.data_loaded = True
-                st.rerun()
-
-else:
-    # Read dataframes from Session State
-    fg_history_df = st.session_state.fg_history_df
-    prices_df = st.session_state.prices_df
-    reddit_mentions_df = st.session_state.reddit_mentions_df
-
-    # ==========================================
-    # SUMMARY METRIC CARDS
-    # ==========================================
-    kpi_cols = st.columns(4)
-
-    # 1. Market Sentiment Score (Fear & Greed)
-    with kpi_cols[0]:
-        if not fg_history_df.empty:
-            fg_val = int(fg_history_df["value"].iloc[0])
-            fg_class = fg_history_df["value_classification"].iloc[0]
-
-            color_class = "glow-yellow"
-            if fg_val < 30:
-                color_class = "glow-red"
-            elif fg_val > 70:
-                color_class = "glow-green"
-
-            st.markdown(
-                f"""
-                <div class="metric-card">
-                    <div class="metric-title">Fear & Greed Score</div>
-                    <div class="metric-value">{fg_val}</div>
-                    <div class="metric-label {color_class}">{fg_class}</div>
-                </div>
-            """,
-                unsafe_allow_html=True,
-            )
-        else:
-            st.markdown(
-                """
-                <div class="metric-card">
-                    <div class="metric-title">Fear & Greed Score</div>
-                    <div class="metric-value">N/A</div>
-                    <div class="metric-label">No Data</div>
-                </div>
-            """,
-                unsafe_allow_html=True,
-            )
-
-    # 2. BTC Price
-    with kpi_cols[1]:
-        btc_price = "N/A"
-        if not prices_df.empty:
-            btc_row = prices_df[prices_df["symbol"] == "btc"]
-            if not btc_row.empty:
-                btc_price = f"${btc_row['price'].iloc[0]:,.2f}"
         st.markdown(
             f"""
             <div class="metric-card">
-                <div class="metric-title">Bitcoin (BTC) Price</div>
-                <div class="metric-value">{btc_price}</div>
-                <div class="metric-label glow-green">Coingecko API</div>
+                <div class="metric-title">Fear & Greed Index</div>
+                <div class="metric-value">{fg_val} <span style="font-size:16px; color:#8b949e;">/ 100</span></div>
+                <div class="metric-sub {badge_style}">{fg_class}</div>
+            </div>
+        """,
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            """
+            <div class="metric-card">
+                <div class="metric-title">Fear & Greed Index</div>
+                <div class="metric-value">N/A</div>
+                <div class="metric-sub badge-yellow">No Data</div>
             </div>
         """,
             unsafe_allow_html=True,
         )
 
-    # 3. ETH Price
-    with kpi_cols[2]:
-        eth_price = "N/A"
-        if not prices_df.empty:
-            eth_row = prices_df[prices_df["symbol"] == "eth"]
-            if not eth_row.empty:
-                eth_price = f"${eth_row['price'].iloc[0]:,.2f}"
+# Function to render clean token price card
+def render_token_card(container, token_symbol, token_name):
+    price_str = "N/A"
+    badge_text = "Active"
+    badge_style = "badge-green"
+
+    if not prices_df.empty:
+        token_row = prices_df[prices_df["symbol"].str.upper() == token_symbol]
+        if not token_row.empty:
+            val = token_row["price"].iloc[0]
+            if val < 1.0:
+                price_str = f"${val:,.4f}"
+            else:
+                price_str = f"${val:,.2f}"
+
+    with container:
         st.markdown(
             f"""
             <div class="metric-card">
-                <div class="metric-title">Ethereum (ETH) Price</div>
-                <div class="metric-value">{eth_price}</div>
-                <div class="metric-label glow-green">Coingecko API</div>
+                <div class="metric-title">{token_name} ({token_symbol})</div>
+                <div class="metric-value">{price_str}</div>
+                <div class="metric-sub {badge_style}">{badge_text}</div>
             </div>
         """,
             unsafe_allow_html=True,
         )
 
-    # 4. SOL Price
-    with kpi_cols[3]:
-        sol_price = "N/A"
-        if not prices_df.empty:
-            sol_row = prices_df[prices_df["symbol"] == "sol"]
-            if not sol_row.empty:
-                sol_price = f"${sol_row['price'].iloc[0]:,.2f}"
-        st.markdown(
-            f"""
-            <div class="metric-card">
-                <div class="metric-title">Solana (SOL) Price</div>
-                <div class="metric-value">{sol_price}</div>
-                <div class="metric-label glow-green">Coingecko API</div>
-            </div>
-        """,
-            unsafe_allow_html=True,
-        )
 
-    st.markdown("###")
+render_token_card(kpi_cols[1], "BTC", "Bitcoin")
+render_token_card(kpi_cols[2], "ETH", "Ethereum")
+render_token_card(kpi_cols[3], "SOL", "Solana")
 
-    # ==========================================
-    # CHARTS ROW 1
-    # ==========================================
-    col1, col2 = st.columns(2)
+st.markdown("###")
 
-    # Chart 1: Fear & Greed Trend (7 days vs 30 days)
-    with col1:
-        st.subheader(f"📈 Fear & Greed Index Trend (Last {days_to_show} Days)")
-        if not fg_history_df.empty:
-            fg_history_plot = (
-                fg_history_df.head(days_to_show).iloc[::-1].reset_index(drop=True)
+# ==========================================
+# CHARTS ROW 1
+# ==========================================
+col1, col2 = st.columns(2)
+
+# Chart 1: Fear & Greed Trend
+with col1:
+    st.subheader(f"📈 Fear & Greed Sentiment Trend (Last {days_to_show} Days)")
+    if not fg_history_df.empty:
+        fg_plot = fg_history_df.head(days_to_show).iloc[::-1].reset_index(drop=True)
+        fig_fg = go.Figure()
+
+        fig_fg.add_trace(
+            go.Scatter(
+                x=fg_plot["dt"],
+                y=fg_plot["value"],
+                mode="lines+markers",
+                name="Sentiment Index",
+                line=dict(color="#ff9900", width=3),
+                marker=dict(size=5, color="#ff9900"),
+                fill="tozeroy",
+                fillcolor="rgba(255, 153, 0, 0.08)",
             )
-            fig_fg = go.Figure()
+        )
 
+        fg_plot["7_day_ma"] = fg_plot["value"].rolling(window=7).mean()
+        if not fg_plot["7_day_ma"].isna().all():
             fig_fg.add_trace(
                 go.Scatter(
-                    x=fg_history_plot["dt"],
-                    y=fg_history_plot["value"],
-                    mode="lines+markers",
-                    name="Fear & Greed Index",
-                    line=dict(color="#ff9900", width=3),
-                    marker=dict(size=6, color="#ff9900"),
-                    fill="tozeroy",
-                    fillcolor="rgba(255, 153, 0, 0.1)",
+                    x=fg_plot["dt"],
+                    y=fg_plot["7_day_ma"],
+                    mode="lines",
+                    name="7-Day Moving Avg",
+                    line=dict(color="#58a6ff", width=2, dash="dash"),
                 )
             )
 
-            fg_history_plot["7_day_ma"] = (
-                fg_history_plot["value"].rolling(window=7).mean()
-            )
-            if not fg_history_plot["7_day_ma"].isna().all():
-                fig_fg.add_trace(
-                    go.Scatter(
-                        x=fg_history_plot["dt"],
-                        y=fg_history_plot["7_day_ma"],
-                        mode="lines",
-                        name="7-Day Moving Avg",
-                        line=dict(color="#58a6ff", width=2, dash="dash"),
-                    )
-                )
+        fig_fg.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            xaxis=dict(showgrid=True, gridcolor="#21262d", title="Date", color="#c9d1d9"),
+            yaxis=dict(showgrid=True, gridcolor="#21262d", title="Index Value (0-100)", range=[0, 100], color="#c9d1d9"),
+            legend=dict(font=dict(color="#c9d1d9")),
+            margin=dict(l=20, r=20, t=20, b=20),
+            height=380,
+        )
+        st.plotly_chart(fig_fg, use_container_width=True)
+    else:
+        st.info("No historical Fear & Greed data available.")
 
-            fig_fg.update_layout(
+# Chart 2: Social Mentions by Token
+with col2:
+    st.subheader(f"🔥 Reddit Social Discussion Volume (Last {days_to_show} Days)")
+    if not reddit_mentions_df.empty:
+        recent_reddit = reddit_mentions_df.tail(days_to_show)
+        mentions_list = []
+
+        col_map = {
+            "BTC": "btc_mentions",
+            "ETH": "eth_mentions",
+            "SOL": "sol_mentions",
+            "ADA": "ada_mentions",
+            "XRP": "xrp_mentions",
+            "DOT": "dot_mentions",
+            "AVAX": "avax_mentions",
+            "DOGE": "doge_mentions",
+        }
+
+        for coin in selected_coins:
+            c_col = col_map.get(coin)
+            if c_col in recent_reddit.columns:
+                total_m = int(recent_reddit[c_col].sum())
+                mentions_list.append({"Token": coin, "Mentions": total_m})
+
+        summed_mentions = pd.DataFrame(mentions_list)
+
+        if not summed_mentions.empty and summed_mentions["Mentions"].sum() > 0:
+            fig_bar = px.bar(
+                summed_mentions,
+                x="Token",
+                y="Mentions",
+                color="Token",
+                color_discrete_sequence=["#ff9900", "#8c8cff", "#39d353", "#0033ad", "#23292f", "#e6007a", "#e84142", "#c2a633"],
+                labels={"Token": "Cryptocurrency", "Mentions": "Total Reddit Mentions"},
+            )
+            fig_bar.update_layout(
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
-                xaxis=dict(
-                    showgrid=True,
-                    gridcolor="#21262d",
-                    title="Date",
-                    color="#c9d1d9",
-                ),
-                yaxis=dict(
-                    showgrid=True,
-                    gridcolor="#21262d",
-                    title="Value",
-                    range=[0, 100],
-                    color="#c9d1d9",
-                ),
-                legend=dict(font=dict(color="#c9d1d9")),
+                xaxis=dict(showgrid=False, color="#c9d1d9"),
+                yaxis=dict(showgrid=True, gridcolor="#21262d", color="#c9d1d9"),
+                showlegend=False,
                 margin=dict(l=20, r=20, t=20, b=20),
                 height=380,
             )
-            st.plotly_chart(fig_fg, use_container_width=True)
+            st.plotly_chart(fig_bar, use_container_width=True)
         else:
-            st.info("No historical Fear & Greed data found in Athena.")
+            st.info("No social mentions recorded for the selected tokens in this timeframe.")
+    else:
+        st.info("No Reddit post data found in Athena.")
 
-    # Chart 2: Top Mentioned Coins (Reddit Social Volume)
-    with col2:
-        st.subheader(f"🔥 Reddit Sentiment & Mentions (Last {days_to_show} Days)")
-        if not reddit_mentions_df.empty:
-            recent_reddit = reddit_mentions_df.tail(days_to_show)
-            btc_total = (
-                int(recent_reddit["btc_mentions"].sum())
-                if "BTC" in selected_coins
-                else 0
-            )
-            eth_total = (
-                int(recent_reddit["eth_mentions"].sum())
-                if "ETH" in selected_coins
-                else 0
-            )
-            sol_total = (
-                int(recent_reddit["sol_mentions"].sum())
-                if "SOL" in selected_coins
-                else 0
-            )
+st.markdown("---")
 
-            mentions_list = []
-            if "BTC" in selected_coins:
-                mentions_list.append({"coin": "BTC", "mentions": btc_total})
-            if "ETH" in selected_coins:
-                mentions_list.append({"coin": "ETH", "mentions": eth_total})
-            if "SOL" in selected_coins:
-                mentions_list.append({"coin": "SOL", "mentions": sol_total})
+# ==========================================
+# CHARTS ROW 2 - DUAL AXIS CORRELATION
+# ==========================================
+st.subheader(f"📊 Price vs Social Volume Correlation (BTC) - Last {days_to_show} Days")
+st.markdown("Overlaying Bitcoin price action against Reddit discussion spikes to identify market hype cycles.")
 
-            summed_mentions = (
-                pd.DataFrame(mentions_list)
-                if mentions_list
-                else pd.DataFrame(columns=["coin", "mentions"])
-            )
-
-            if not summed_mentions.empty:
-                fig_bar = px.bar(
-                    summed_mentions,
-                    x="coin",
-                    y="mentions",
-                    color="coin",
-                    color_discrete_map={
-                        "BTC": "#ff9900",
-                        "ETH": "#8c8cff",
-                        "SOL": "#39d353",
-                    },
-                    labels={
-                        "coin": "Crypto Token",
-                        "mentions": "Reddit Post Mention Count",
-                    },
-                )
-                fig_bar.update_layout(
-                    paper_bgcolor="rgba(0,0,0,0)",
-                    plot_bgcolor="rgba(0,0,0,0)",
-                    xaxis=dict(showgrid=False, color="#c9d1d9"),
-                    yaxis=dict(showgrid=True, gridcolor="#21262d", color="#c9d1d9"),
-                    showlegend=False,
-                    margin=dict(l=20, r=20, t=20, b=20),
-                    height=380,
-                )
-                st.plotly_chart(fig_bar, use_container_width=True)
-            else:
-                st.info("No selected coins to display in Reddit sentiment chart.")
-        else:
-            st.info("No Reddit post mentions found in Athena.")
-
-    st.markdown("---")
-
-    # ==========================================
-    # CHARTS ROW 2 - BTC CORRELATION
-    # ==========================================
-    st.subheader(
-        f"📈 Price vs Reddit Activity Correlation (BTC) - Last {days_to_show} Days"
-    )
-    st.markdown(
-        "Analyzing how spikes in social discussions on Reddit align with price movement phases."
-    )
-
-    if not prices_df.empty and not reddit_mentions_df.empty:
-        btc_prices = prices_df[prices_df["symbol"] == "btc"].copy()
+if not prices_df.empty and not reddit_mentions_df.empty:
+    btc_prices = prices_df[prices_df["symbol"] == "BTC"].copy()
+    if not btc_prices.empty:
         btc_prices_grouped = btc_prices.groupby("dt")["price"].mean().reset_index()
         btc_prices_grouped.columns = ["report_date", "avg_price"]
 
         btc_mentions = reddit_mentions_df[["report_date", "btc_mentions"]].copy()
         btc_mentions.columns = ["report_date", "mention_count"]
 
-        correlation_df = pd.merge(
-            btc_prices_grouped, btc_mentions, on="report_date", how="left"
-        )
-        correlation_df["mention_count"] = correlation_df["mention_count"].fillna(0)
-        correlation_df = correlation_df.sort_values("report_date").reset_index(
-            drop=True
-        )
-        correlation_df = correlation_df.tail(days_to_show)
+        corr_df = pd.merge(btc_prices_grouped, btc_mentions, on="report_date", how="left")
+        corr_df["mention_count"] = corr_df["mention_count"].fillna(0)
+        corr_df = corr_df.sort_values("report_date").reset_index(drop=True)
+        corr_df = corr_df.tail(days_to_show)
 
-        if not correlation_df.empty:
+        if not corr_df.empty:
             fig_corr = go.Figure()
 
             fig_corr.add_trace(
                 go.Scatter(
-                    x=correlation_df["report_date"],
-                    y=correlation_df["avg_price"],
+                    x=corr_df["report_date"],
+                    y=corr_df["avg_price"],
                     mode="lines+markers",
-                    name="BTC Average Price ($)",
+                    name="BTC Price ($)",
                     line=dict(color="#39d353", width=3),
                     yaxis="y1",
                 )
@@ -548,10 +473,10 @@ else:
 
             fig_corr.add_trace(
                 go.Bar(
-                    x=correlation_df["report_date"],
-                    y=correlation_df["mention_count"],
-                    name="Reddit Mention Count",
-                    marker=dict(color="rgba(88, 166, 255, 0.4)"),
+                    x=corr_df["report_date"],
+                    y=corr_df["mention_count"],
+                    name="Reddit Discussion Count",
+                    marker=dict(color="rgba(88, 166, 255, 0.35)"),
                     yaxis="y2",
                 )
             )
@@ -559,23 +484,16 @@ else:
             fig_corr.update_layout(
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
-                xaxis=dict(
-                    showgrid=True,
-                    gridcolor="#21262d",
-                    title="Date",
-                    color="#c9d1d9",
-                ),
+                xaxis=dict(showgrid=True, gridcolor="#21262d", title="Date", color="#c9d1d9"),
                 yaxis1=dict(
-                    title=dict(
-                        text="BTC Average Price ($)", font=dict(color="#39d353")
-                    ),
+                    title=dict(text="Bitcoin Price ($)", font=dict(color="#39d353")),
                     tickfont=dict(color="#39d353"),
                     showgrid=True,
                     gridcolor="#21262d",
                     color="#39d353",
                 ),
                 yaxis2=dict(
-                    title=dict(text="Reddit Mentions", font=dict(color="#58a6ff")),
+                    title=dict(text="Reddit Discussion Spikes", font=dict(color="#58a6ff")),
                     tickfont=dict(color="#58a6ff"),
                     overlaying="y",
                     side="right",
@@ -588,6 +506,8 @@ else:
             )
             st.plotly_chart(fig_corr, use_container_width=True)
         else:
-            st.info("No pricing or Reddit mention data correlation available.")
+            st.info("No correlation data available for the selected timeline.")
     else:
-        st.info("Pricing or Reddit data is missing to display correlation.")
+        st.info("Bitcoin price data is missing.")
+else:
+    st.info("Pricing or Reddit data is unavailable.")
