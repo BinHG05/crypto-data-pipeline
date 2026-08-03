@@ -85,6 +85,21 @@ jobs:
       - name: Install dbt packages
         run: dbt deps
 
+      - name: Create dummy dbt profile for parse validation
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml <<EOF
+          crypto_transform:
+            target: dev
+            outputs:
+              dev:
+                type: bigquery
+                method: service-account
+                project: "dummy-project"
+                dataset: "dummy_dataset"
+                keyfile: "/tmp/dummy.json"
+          EOF
+
       - name: Validate dbt Syntax (Parse)
         run: dbt parse
 
