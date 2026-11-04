@@ -14,76 +14,9 @@ An **End-to-End, Production-Inspired, Zero-Cost Multi-Cloud Data Engineering Pla
 
 ## 🏛️ High-Level System Architecture
 
-```mermaid
-flowchart LR
-    %% Data Sources Layer
-    subgraph S1 ["1. Data Sources"]
-        direction TB
-        CG["CoinGecko API<br/><b>Prices & Trending</b>"]
-        RD["Reddit API<br/><b>r/CryptoCurrency</b>"]
-        FG["Alternative.me<br/><b>Fear & Greed Index</b>"]
-        BN["Binance WebSocket<br/><b>BTC/USDT Realtime</b>"]
-    end
-
-    %% Ingestion & Quality Gates Layer
-    subgraph S2 ["2. Ingestion & Quality Gates"]
-        direction TB
-        PYD["Pydantic Contracts<br/><i>schema_validator.py</i>"]
-        QUAR{"Schema Gate &<br/>Quarantine Pattern"}
-        PARQ["Compaction Engine<br/><i>Snappy Parquet</i>"]
-    end
-
-    %% Storage & Lakehouse Layer
-    subgraph S3 ["3. Storage & Lakehouse (Medallion)"]
-        direction TB
-        BRONZE[("Bronze Zone<br/><b>Raw JSONL / GCS</b>")]
-        S3LAKE[("Data Lake<br/><b>Parquet on AWS S3</b>")]
-        ATHENA["AWS Athena<br/><i>Partition Projection</i>"]
-    end
-
-    %% Warehouse & dbt Layer
-    subgraph S4 ["4. Warehouse & dbt Marts"]
-        direction TB
-        BQ_RAW[("BigQuery Raw<br/><i>crypto_dataset</i>")]
-        SILVER["Silver Layer<br/><i>dbt Cleaned Staging</i>"]
-        GOLD[("Gold Fact Marts<br/><b>Partitioned & Clustered</b><br/>• fct_crypto_daily<br/>• fct_market_insights")]
-    end
-
-    %% Serving & Consumption Layer
-    subgraph S5 ["5. Analytics & Serving"]
-        direction TB
-        ST["Streamlit Cloud<br/><i>Live Interactive Dashboard</i>"]
-        API["FastAPI Service<br/><i>Swagger REST API</i>"]
-        LOOKER["Looker Studio<br/><i>Executive BI Reports</i>"]
-    end
-
-    %% Orchestration & Control Plane
-    subgraph CTRL ["⚙️ Orchestration, Reliability & Observability (Airflow 3.x & CI/CD)"]
-        direction LR
-        AIRFLOW["Apache Airflow 3.x<br/><i>CeleryExecutor Cluster</i>"]
-        TG["Telegram Bot<br/><i>Instant Alert Webhook</i>"]
-        CI["GitHub Actions<br/><i>Lint, Test & dbt parse</i>"]
-    end
-
-    %% Data Pipeline Connections
-    CG & RD & FG --> PYD
-    BN --> BQ_RAW
-    PYD --> QUAR
-    QUAR -->|Valid JSONL| BRONZE
-    QUAR -->|Compacted Parquet| PARQ --> S3LAKE
-    S3LAKE --> ATHENA --> ST
-    BRONZE --> BQ_RAW --> SILVER --> GOLD
-    GOLD --> API
-    GOLD --> LOOKER
-    GOLD -.-> ST
-
-    %% Control Plane Connections
-    AIRFLOW -. Orchestrates .-> S1
-    AIRFLOW -. Validates .-> S2
-    AIRFLOW -. Runs Incremental dbt .-> S4
-    AIRFLOW -. on_failure_callback .-> TG
-    CI -. Verifies PRs & Deploys .-> AIRFLOW
-```
+<div align="center">
+  <img src="docs/architecture_diagram.jpg" alt="Crypto Market Intelligence High-Level System Architecture" width="100%">
+</div>
 
 ---
 
