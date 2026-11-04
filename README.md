@@ -1,4 +1,4 @@
-# ⚡ Production-Grade Crypto Data Pipeline & Market Intelligence Platform
+# ⚡ Crypto Market Intelligence & Multi-Cloud Data Platform
 
 [![Live Streamlit Dashboard](https://img.shields.io/badge/Live_Dashboard-Streamlit_Cloud-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://crypto-data-pipeline-binhg.streamlit.app/)
 [![Airflow 3.x](https://img.shields.io/badge/Orchestration-Apache_Airflow_3.2-017CEE?style=for-the-badge&logo=Apache%20Airflow&logoColor=white)](https://airflow.apache.org/)
@@ -6,71 +6,106 @@
 [![AWS Athena & S3](https://img.shields.io/badge/Data_Lake-AWS_S3_%26_Athena-232F3E?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://aws.amazon.com/)
 [![CI/CD GitHub Actions](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/features/actions)
 
-An **Enterprise-Grade, Zero-Cost, Production Data Engineering Pipeline** that ingests multi-source cryptocurrency market data and social sentiments (CoinGecko, Reddit, Fear & Greed Index, Trending Coins), enforces Pydantic data contracts, transforms data via dbt BigQuery Incremental models with Medallion Architecture, orchestrates tasks via Apache Airflow, and serves live interactive analytics via **AWS Athena + Streamlit Cloud**.
+An **End-to-End, Production-Inspired, Zero-Cost Multi-Cloud Data Engineering Platform** that ingests multi-source cryptocurrency market data and social sentiments (CoinGecko, Reddit, Fear & Greed Index, Trending Coins, Binance Stream), enforces Pydantic data contracts, transforms data via dbt BigQuery Incremental models with Medallion Architecture, orchestrates tasks via Apache Airflow 3.x, and serves live interactive analytics via **AWS Athena + Streamlit Cloud**.
 
 👉 **Live Demo Dashboard**: [crypto-data-pipeline-binhg.streamlit.app](https://crypto-data-pipeline-binhg.streamlit.app/)
 
 ---
 
-## 🏛️ System Architecture
+## 🏛️ High-Level System Architecture
 
 ```mermaid
-flowchart TD
-    subgraph Data Sources ["🌐 Multi-Source Data Ingestion"]
-        CG["CoinGecko API (Prices & Trending)"]
-        RD["Reddit API (/r/CryptoCurrency)"]
-        FG["Alternative.me API (Fear & Greed Index)"]
+flowchart LR
+    %% Data Sources Layer
+    subgraph S1 ["1. Data Sources"]
+        direction TB
+        CG["CoinGecko API<br/><b>Prices & Trending</b>"]
+        RD["Reddit API<br/><b>r/CryptoCurrency</b>"]
+        FG["Alternative.me<br/><b>Fear & Greed Index</b>"]
+        BN["Binance WebSocket<br/><b>BTC/USDT Realtime</b>"]
     end
 
-    subgraph Data Quality Gate ["🛡️ Ingestion & Quality Control"]
-        PYD["Pydantic Data Contracts (schema_validator.py)"]
-        QUAR["Quarantine & Fail-Fast Guard"]
+    %% Ingestion & Quality Gates Layer
+    subgraph S2 ["2. Ingestion & Quality Gates"]
+        direction TB
+        PYD["Pydantic Contracts<br/><i>schema_validator.py</i>"]
+        QUAR{"Schema Gate &<br/>Quarantine Pattern"}
+        PARQ["Compaction Engine<br/><i>Snappy Parquet</i>"]
     end
 
-    subgraph Data Lake ["📦 Data Lake & Storage Layer"]
-        RAW["Bronze Raw Storage (JSONL)"]
-        PARQ["Compaction Engine (Snappy Parquet)"]
-        S3["AWS S3 Bucket & Athena Projection"]
+    %% Storage & Lakehouse Layer
+    subgraph S3 ["3. Storage & Lakehouse (Medallion)"]
+        direction TB
+        BRONZE[("Bronze Zone<br/><b>Raw JSONL / GCS</b>")]
+        S3LAKE[("Data Lake<br/><b>Parquet on AWS S3</b>")]
+        ATHENA["AWS Athena<br/><i>Partition Projection</i>"]
     end
 
-    subgraph Warehouse ["🧱 Enterprise Data Warehouse (BigQuery)"]
-        STG["Silver Staging Layer (dbt views)"]
-        FACT["Gold Fact Marts (fct_market_insights, fct_crypto_daily)"]
-        PART["Date Partitioning & Symbol Clustering"]
+    %% Warehouse & dbt Layer
+    subgraph S4 ["4. Warehouse & dbt Marts"]
+        direction TB
+        BQ_RAW[("BigQuery Raw<br/><i>crypto_dataset</i>")]
+        SILVER["Silver Layer<br/><i>dbt Cleaned Staging</i>"]
+        GOLD[("Gold Fact Marts<br/><b>Partitioned & Clustered</b><br/>• fct_crypto_daily<br/>• fct_market_insights")]
     end
 
-    subgraph Orchestration & CI ["⚙️ Orchestration, CI/CD & Operations"]
-        AIR["Apache Airflow 3.x (Celery Executor)"]
-        TG["Telegram Bot Incident Alerts"]
-        CI["GitHub Actions CI/CD Quality Gates"]
+    %% Serving & Consumption Layer
+    subgraph S5 ["5. Analytics & Serving"]
+        direction TB
+        ST["Streamlit Cloud<br/><i>Live Interactive Dashboard</i>"]
+        API["FastAPI Service<br/><i>Swagger REST API</i>"]
+        LOOKER["Looker Studio<br/><i>Executive BI Reports</i>"]
     end
 
-    subgraph Serving ["📊 Production Analytics & Serving"]
-        ATH["AWS Athena Serverless Query Engine"]
-        ST["Streamlit Community Cloud Live Dashboard"]
+    %% Orchestration & Control Plane
+    subgraph CTRL ["⚙️ Orchestration, Reliability & Observability (Airflow 3.x & CI/CD)"]
+        direction LR
+        AIRFLOW["Apache Airflow 3.x<br/><i>CeleryExecutor Cluster</i>"]
+        TG["Telegram Bot<br/><i>Instant Alert Webhook</i>"]
+        CI["GitHub Actions<br/><i>Lint, Test & dbt parse</i>"]
     end
 
-    CG --> PYD
-    RD --> PYD
-    FG --> PYD
-    PYD --> QUAR --> RAW
-    RAW --> PARQ --> S3
-    RAW --> STG --> FACT --> PART
-    AIR --> CG
-    AIR --> RD
-    AIR --> FG
-    AIR --> STG
-    AIR --> TG
-    S3 --> ATH --> ST
-    CI --> AIR
+    %% Data Pipeline Connections
+    CG & RD & FG --> PYD
+    BN --> BQ_RAW
+    PYD --> QUAR
+    QUAR -->|Valid JSONL| BRONZE
+    QUAR -->|Compacted Parquet| PARQ --> S3LAKE
+    S3LAKE --> ATHENA --> ST
+    BRONZE --> BQ_RAW --> SILVER --> GOLD
+    GOLD --> API
+    GOLD --> LOOKER
+    GOLD -.-> ST
+
+    %% Control Plane Connections
+    AIRFLOW -. Orchestrates .-> S1
+    AIRFLOW -. Validates .-> S2
+    AIRFLOW -. Runs Incremental dbt .-> S4
+    AIRFLOW -. on_failure_callback .-> TG
+    CI -. Verifies PRs & Deploys .-> AIRFLOW
 ```
 
 ---
 
-## 💎 3-Tier Medallion Data Architecture
+## 🏗️ Architectural Layer Breakdown Matrix
+
+A detailed architectural breakdown following industry-standard **Medallion Data Architecture** and physical implementation specifications:
+
+| Architectural Tier | Component & Storage | Ingestion & Load Pattern | Transformations & Logic | Data Modeling & Schema | Quality Gates & Governance |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **1. Data Sources** | • CoinGecko REST API<br/>• Reddit JSON API<br/>• Alternative.me API<br/>• Binance WebSocket | Batch HTTP GET requests (Daily schedule) + Continuous Async WebSocket event stream | • Raw payload fetching<br/>• Exponential backoff retries<br/>• Rate-limit guard | Unstructured JSON payloads & WebSocket trade ticks | API HTTP status code checks, timeout guards (15s), fallback mock generation |
+| **2. Ingestion & Quality Gate** | In-memory Python workers running under Airflow CeleryExecutor | Ingestion validation gate before landing on disk | • Strict type coercion<br/>• Schema drift detection<br/>• Malformed record quarantine | Pydantic BaseModels (`CoinGeckoRecord`, `RedditRecord`, `FearGreedRecord`, `TrendingCoinRecord`) | **Pydantic Data Contracts**: Quarantine pattern isolates invalid records; fail-fast halts invalid pipelines |
+| **3. Bronze Layer (Data Lake)** | • **GCP GCS**: `gs://crypto-data-lake-subin/raw/`<br/>• **AWS S3**: `s3://crypto-data-lake-hg/raw/` | Append-only raw snapshots partitioned by ingestion date (`yyyy-MM-dd`) | **Compaction Engine**: Merges small JSONL files into compressed, columnar **Snappy Parquet** format | Raw JSONL and compressed Snappy Parquet (No structural transformation) | Local non-empty file assertion (`assert_non_empty_local_jsonl`) prior to Cloud upload |
+| **4. Silver Layer (Cleaned & Staged)** | **GCP BigQuery**: Staging views in `crypto_transform` dataset | Loaded from GCS via BigQuery Load Jobs with `WRITE_APPEND` and schema autodetection | • Data type casting & renaming<br/>• Timestamp normalization to UTC<br/>• Duplicate removal | 1:1 Staging Entities:<br/>• `stg_coingecko`<br/>• `stg_reddit`<br/>• `stg_fear_greed`<br/>• `stg_trending_coins` | dbt automated schema tests: `unique`, `not_null` on primary IDs; non-zero row verification (`output_rows > 0`) |
+| **5. Gold Layer (Curated Marts)** | **GCP BigQuery**: Tables with **Date Partitioning** (`report_date`) & **Clustering** (`coin_id`) | **Incremental Merge** (`incremental_strategy='merge'`, `unique_key='record_id'`) with 3-to-9-day lookback window | • Surrogate key generation<br/>• 7-day rolling average price<br/>• 7-day rolling Reddit posts<br/>• Pearson Correlation (`CORR`)<br/>• Composite Sentiment Score (70% F&G + 30% Reddit) | **Kimball Star Schema**:<br/>• `dim_coin` (Dimension)<br/>• `dim_date` (Dimension)<br/>• `fct_crypto_daily` (Fact)<br/>• `fct_market_insights` (Fact) | **56 dbt automated tests**: `accepted_range` (price > 0, sentiment 0-100), referential integrity `relationships`, singular spike tests |
+| **6. Serving & Consumption** | • **Streamlit Cloud** (Live Dashboard)<br/>• **AWS Athena** (Serverless Ad-hoc)<br/>• **FastAPI** (REST API) | Serverless ad-hoc SQL execution via **PyAthena** with asynchronous session caching | Direct aggregation & visualization of Gold Marts; low-latency REST endpoints | Presentation-ready metrics, KPI scorecards, price-sentiment correlation plots | PyAthena query cache, connection retries, sub-second dashboard rendering |
+
+---
+
+## 💎 3-Tier Medallion Data Architecture Highlights
 
 1. **Bronze Layer (Raw Data Lake Zone)**:
-   * **Raw JSONL Snapshots**: Preserves raw API responses (`coingecko/`, `reddit/`, `fear_greed/`, `trending_coins/`) for auditing and full backfill replayability.
+   * **Raw JSONL Snapshots**: Preserves immutable raw API responses (`coingecko/`, `reddit/`, `fear_greed/`, `trending_coins/`) for auditing and full historical backfill replayability.
    * **Data Lake Compaction Engine**: Merges small JSON files into compressed, columnar **Snappy Parquet** format for zero-latency Athena queries.
 2. **Silver Layer (Cleaned & Standardized Zone)**:
    * dbt Staging Models (`stg_coingecko`, `stg_reddit`, `stg_fear_greed`, `stg_trending_coins`).
