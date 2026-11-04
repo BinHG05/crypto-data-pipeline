@@ -36,8 +36,8 @@ REDDIT_API = {
         "raw_json": 1,
     },
     "headers": {
-        "Accept": "application/json",
-        "User-Agent": "windows:crypto-data-pipeline:v1.0 (by /u/nguyensubins1)",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
     },
 }
 
